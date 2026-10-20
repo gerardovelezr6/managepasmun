@@ -15,6 +15,7 @@ const fallback: Settings = {
   primary_color: APP_CONFIG.fallbackPrimary,
   accent_color: APP_CONFIG.fallbackAccent,
   default_speaking_sec: APP_CONFIG.defaultSpeakingSec,
+  explanation_points: 1,
 };
 
 const Ctx = createContext<{ settings: Settings; reload: () => void }>({ settings: fallback, reload: () => {} });

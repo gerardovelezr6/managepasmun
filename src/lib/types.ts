@@ -22,6 +22,7 @@ export interface Settings {
   primary_color: string;
   accent_color: string;
   default_speaking_sec: number;
+  explanation_points: number;
 }
 
 export interface Committee {
@@ -51,6 +52,7 @@ export interface CommitteeState {
   caucus_topic: string | null;
   caucus_speaking_sec: number | null;
   session_started_at: string | null;
+  current_session_id: string | null;
   updated_at: string;
 }
 
@@ -82,6 +84,8 @@ export interface EventRow {
   duration_sec: number | null;
   speaking_sec: number | null;
   status: string;
+  reason: string | null;
+  session_id: string | null;
   created_at: string;
 }
 
@@ -96,6 +100,8 @@ export interface VoteRow {
   final_for: number | null;
   final_against: number | null;
   final_abstain: number | null;
+  label: string | null;
+  session_id: string | null;
   created_at: string;
   closed_at: string | null;
 }
@@ -145,6 +151,7 @@ export interface CommitteeAnalytics {
   points_total: number;
   votes_total: number;
   votes_open: number;
+  sessions_total: number;
 }
 
 export interface ArchiveRecord {
@@ -152,4 +159,75 @@ export interface ArchiveRecord {
   label: string;
   counts: Record<string, number>;
   created_at: string;
+}
+
+export interface SessionRow {
+  id: string;
+  committee_id: string;
+  number: number;
+  opened_at: string;
+  closed_at: string | null;
+}
+
+export interface SessionAttendance {
+  id: string;
+  session_id: string;
+  committee_id: string;
+  delegate_id: string;
+  attendance: Attendance;
+  late: boolean;
+}
+
+export interface Absence {
+  id: string;
+  committee_id: string;
+  session_id: string | null;
+  delegate_id: string;
+  left_at: string;
+  returned_at: string | null;
+}
+
+export interface ParticipationEntry {
+  id: string;
+  committee_id: string;
+  session_id: string;
+  delegate_id: string;
+  category: 'sl_speech' | 'sl_question' | 'mc' | 'umc' | 'wp' | 'rp';
+  level_key: string;
+  score: number;
+  label: string | null;
+  created_at: string;
+}
+
+export interface ParticipationNote {
+  committee_id: string;
+  session_id: string;
+  delegate_id: string;
+  note: string;
+  updated_at: string;
+}
+
+export interface WarningRow {
+  id: string;
+  committee_id: string;
+  session_id: string | null;
+  delegate_id: string;
+  reason: string;
+  created_at: string;
+}
+
+export interface AwardRow {
+  committee_id: string;
+  award: 'best_delegate' | 'outstanding_delegate' | 'honorific_mention' | 'best_position_paper';
+  delegate_id: string;
+}
+
+export interface RubricLevel {
+  id: string;
+  category: ParticipationEntry['category'];
+  level_key: string;
+  label: string;
+  description: string;
+  score: number;
+  sort: number;
 }
