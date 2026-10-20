@@ -46,6 +46,19 @@ npm run dev                  # http://localhost:3000
 4. Chair: take roll → *Call to order* → run the floor. Passing a caucus / speaking-time / suspension / adjournment motion applies it automatically.
 5. After the conference: **High Command → Archive & reset**. An archive (JSON, downloadable) is saved first, then live session data is purged. Tick the extra box to also wipe committees/rosters/chair assignments for the next team. Accounts, branding and uploaded files are kept.
 
+## Sessions, participation grading and the grading log
+
+- **Sessions:** *Call to order* / *Resume* / a passed *Open session* motion starts the next numbered session. Roll call is saved per session (on time / late / missed). Suspending or adjourning closes the session and the next one starts with a fresh roll call.
+- **Participation tab:** tap a rubric score per contribution (speakers' list speech or question, moderated caucus, unmoderated caucus, working or resolution paper). Add notes and warnings per delegate. Session totals, grand totals and rank are automatic.
+- **Right of explanation:** only delegates who voted *In favor* or *Against* can have one. Each one marked *given* adds points (default 1, High Command → Grading rubric).
+- **Grading log tab / High Command → Participation & grades:** standings, attendance per session, warnings, winners, and **Export (.xlsx)** in the original five-tab layout.
+- Grades, warnings and notes are visible only to that committee's chairs and High Command. They are never shown on the projection screen and are not readable with the public key.
+- **Rubric:** High Command → Grading rubric edits levels, wording and the explanation points. Past scores keep the score they were given.
+
+## Upgrading a database that already exists
+
+Run the files in `supabase/migrations/` that you haven't run yet, in order, in the Supabase SQL Editor (`001` then `002`). They only add things, can be re-run safely, and keep your data. A brand-new project just runs `supabase/schema.sql`, which already includes everything.
+
 ## Customising
 
 - **Branding** (name, logo, colours, dates, venue): High Command → Branding. Logo upload slot is there.

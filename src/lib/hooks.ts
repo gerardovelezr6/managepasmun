@@ -3,9 +3,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { syncClock } from './clock';
 import { toastError } from './toast';
-import { Committee, CommitteeState } from './types';
+import { Committee, CommitteeState, RubricLevel } from './types';
+import { useSettings } from '@/components/BrandProvider';
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+// The API returns at most 1000 rows per request, so page through bigger tables.
+const PAGE = 1000;
+export async function fetchAllRows<T = any>(build: () => any): Promise<T[]> {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build().range(from, from + PAGE - 1);
+    if (error) throw error;
+    all.push(...((data || []) as T[]));
+    if (!data || data.length < PAGE) break;
+  }
+  return all;
+}
 
 export function useTick(ms = 250) {
   const [, set] = useState(0);
@@ -36,10 +50,14 @@ export function useRows<T>(table: string, committeeId: string | null | undefined
     let timer: any;
     const sb = supabase();
     const load = async () => {
-      const { data, error } = await sb.from(table).select('*').eq('committee_id', committeeId).order(orderCol, { ascending });
+      let data: T[] = [];
+      try {
+        data = await fetchAllRows<T>(() => sb.from(table).select('*').eq('committee_id', committeeId).order(orderCol, { ascending }));
+      } catch (error) {
+        if (alive) toastError(error);
+      }
       if (!alive) return;
-      if (error) toastError(error);
-      setRows((data || []) as T[]);
+      setRows(data);
       setLoading(false);
     };
     loadRef.current = load;
@@ -66,6 +84,7 @@ export function useRows<T>(table: string, committeeId: string | null | undefined
 
 export function useCommitteeState(committeeId: string) {
   const [state, setState] = useState<CommitteeState | null>(null);
+  const refreshRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     let alive = true;
@@ -74,6 +93,7 @@ export function useCommitteeState(committeeId: string) {
       const { data } = await sb.from('committee_state').select('*').eq('committee_id', committeeId).maybeSingle();
       if (alive && data) setState(data as CommitteeState);
     };
+    refreshRef.current = load;
     load();
     const ch = sb
       .channel(`state-${committeeId}-${uid()}`)
@@ -102,7 +122,7 @@ export function useCommitteeState(committeeId: string) {
     [committeeId]
   );
 
-  return { state, update };
+  return { state, update, refresh: () => refreshRef.current() };
 }
 
 export function useCommittee(committeeId: string) {
@@ -154,4 +174,18 @@ export function useLiveReload(tables: string[], load: () => void) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+}
+
+// Grading rubric levels (staff only) plus the points awarded per explanation given.
+export function useRubric() {
+  const [levels, setLevels] = useState<RubricLevel[]>([]);
+  const { settings } = useSettings();
+  const load = useCallback(async () => {
+    const { data } = await supabase().from('rubric_levels').select('*').order('sort');
+    setLevels((data || []) as RubricLevel[]);
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+  return { levels, explanationPoints: Number(settings.explanation_points ?? 1), reload: load };
 }

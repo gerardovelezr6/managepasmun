@@ -8,6 +8,8 @@ import { Users } from '@/components/admin/Users';
 import { Announcements } from '@/components/admin/Announcements';
 import { Branding } from '@/components/admin/Branding';
 import { System } from '@/components/admin/System';
+import { ParticipationOverview } from '@/components/admin/ParticipationOverview';
+import { RubricEditor } from '@/components/admin/RubricEditor';
 import { Documents } from '@/components/Documents';
 
 function Panel() {
@@ -24,6 +26,8 @@ function Panel() {
         tabs={[
           { id: 'analytics', label: 'Live analytics' },
           { id: 'committees', label: 'Committees & chairs' },
+          { id: 'grades', label: 'Participation & grades' },
+          { id: 'rubric', label: 'Grading rubric' },
           { id: 'users', label: 'Users & roles' },
           { id: 'announcements', label: 'Announcements' },
           { id: 'documents', label: 'Global documents' },
@@ -34,6 +38,8 @@ function Panel() {
       <div className="pt-1">
         {tab === 'analytics' && <Analytics />}
         {tab === 'committees' && <Committees />}
+        {tab === 'grades' && <ParticipationOverview />}
+        {tab === 'rubric' && <RubricEditor />}
         {tab === 'users' && <Users />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'documents' && <Documents committeeId={null} />}

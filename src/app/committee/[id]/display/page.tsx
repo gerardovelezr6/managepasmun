@@ -4,10 +4,10 @@ import { useParams } from 'next/navigation';
 import { BrandMark, useSettings } from '@/components/BrandProvider';
 import { LiveTimer } from '@/components/LiveTimer';
 import { useActiveAnnouncements } from '@/components/AnnouncementBanner';
-import { APP_CONFIG, MODE_LABEL, MOTION_TYPES, SESSION_STATUS_LABEL, labelFor } from '@/lib/config';
+import { APP_CONFIG, MODE_LABEL, MOTION_TYPES, SESSION_STATUS_LABEL, codeFor, labelFor } from '@/lib/config';
 import { useClockSync, useCommittee, useCommitteeState, useRows, useTick } from '@/lib/hooks';
 import { THRESHOLD_LABEL, tally, voteOutcome } from '@/lib/session';
-import { Delegate, EventRow, SpeakerEntry, VoteRecord, VoteRow } from '@/lib/types';
+import { Delegate, EventRow, SessionRow, SpeakerEntry, VoteRecord, VoteRow } from '@/lib/types';
 
 // Read-only, clutter-free projection screen for delegates. No controls, no login.
 // Press "F" for fullscreen.
@@ -21,6 +21,7 @@ export default function DisplayPage() {
   const { rows: events } = useRows<EventRow>('events', id, 'created_at', false);
   const { rows: votes } = useRows<VoteRow>('votes', id, 'created_at', false);
   const { rows: records } = useRows<VoteRecord>('vote_records', id, 'id');
+  const { rows: sessions } = useRows<SessionRow>('sessions', id, 'number');
   const announcements = useActiveAnnouncements();
   useClockSync();
   useTick(1000);
@@ -53,6 +54,7 @@ export default function DisplayPage() {
   if (!committee || !state) return <div className="flex min-h-screen items-center justify-center bg-stage text-xl text-slate-400">Connecting…</div>;
 
   const speaker = state.current_speaker_id ? byId.get(state.current_speaker_id) : null;
+  const sessionNumber = sessions.find((s) => s.id === state.current_session_id)?.number;
   const live = state.status === 'in_session';
 
   return (
@@ -71,7 +73,7 @@ export default function DisplayPage() {
               live ? 'bg-emerald-500 text-black' : state.status === 'suspended' ? 'bg-amber-400 text-black' : 'bg-slate-700 text-slate-200'
             }`}
           >
-            {SESSION_STATUS_LABEL[state.status]}
+            {SESSION_STATUS_LABEL[state.status]}{live && sessionNumber ? ` · Session ${sessionNumber}` : ''}
           </div>
           {live && <div className="mt-2 text-sm text-slate-400">{MODE_LABEL[state.mode]}</div>}
         </div>
@@ -119,7 +121,7 @@ export default function DisplayPage() {
                 {explanations.map((r) => (
                   <li key={r.id} className="text-xl">
                     <span className="font-bold">{byId.get(r.delegate_id)?.country}</span>
-                    <span className={r.choice === 'for' ? 'text-emerald-300' : 'text-red-300'}> · {r.choice === 'for' ? 'In favor' : 'Against'}</span>
+                    <span className={r.choice === 'for' ? 'text-emerald-300' : r.choice === 'against' ? 'text-red-300' : 'text-slate-300'}> · {r.choice === 'for' ? 'In favor' : r.choice === 'against' ? 'Against' : 'Abstention'}</span>
                   </li>
                 ))}
               </ul>
@@ -131,6 +133,7 @@ export default function DisplayPage() {
               <ul className="space-y-2">
                 {pendingMotions.slice(0, 4).map((m) => (
                   <li key={m.id} className="text-lg">
+                    <span className="mr-2 rounded bg-accent/20 px-1.5 py-0.5 font-mono text-sm font-bold text-accent">{codeFor(MOTION_TYPES, m.type)}</span>
                     <span className="font-bold">{labelFor(MOTION_TYPES, m.type)}</span>
                     {m.delegate_id && <span className="text-slate-300"> · {byId.get(m.delegate_id)?.country}</span>}
                     {(m.duration_sec || m.speaking_sec) && (
@@ -191,13 +194,13 @@ function VotePanel({ vote, records }: { vote: VoteRow; records: VoteRecord[] }) 
   const t = tally(records.filter((r) => r.vote_id === vote.id));
   return (
     <div className="w-full">
-      <div className="text-lg font-semibold uppercase tracking-[0.25em] text-accent">Voting procedure · {vote.kind}</div>
+      <div className="text-lg font-semibold uppercase tracking-[0.25em] text-accent">Voting procedure · {vote.kind}{vote.label ? ` · ${vote.label}` : ''}</div>
       <div className="mt-2 text-5xl font-black leading-tight">{vote.title}</div>
       <div className="mt-1 text-xl text-slate-400">{THRESHOLD_LABEL[vote.threshold]} required</div>
       <div className={`mt-10 grid gap-6 ${vote.kind === 'substantive' ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <Big label="In favor" n={t.for} tone="text-emerald-400" />
         <Big label="Against" n={t.against} tone="text-red-400" />
-        {vote.kind === 'substantive' && <Big label="Abstain" n={t.abstain} tone="text-slate-300" />}
+        {vote.kind === 'substantive' && <Big label="Abstention" n={t.abstain} tone="text-slate-300" />}
       </div>
     </div>
   );
@@ -216,7 +219,7 @@ function ResultBanner({ vote }: { vote: VoteRow }) {
   const passed = vote.result === 'passed' || (vote.result == null && voteOutcome({ for: vote.final_for || 0, against: vote.final_against || 0 }, vote.threshold) === 'passed');
   return (
     <div className={`mt-8 rounded-2xl px-8 py-4 text-2xl font-bold ${passed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
-      {vote.title}: {passed ? 'PASSED' : 'FAILED'} ({vote.final_for} in favor, {vote.final_against} against{vote.kind === 'substantive' ? `, ${vote.final_abstain} abstain` : ''})
+      {vote.label ? `${vote.label} · ` : ''}{vote.title}: {passed ? 'PASSED' : 'FAILED'} ({vote.final_for} in favor, {vote.final_against} against{vote.kind === 'substantive' ? `, ${vote.final_abstain} abstention${vote.final_abstain === 1 ? '' : 's'}` : ''})
     </div>
   );
 }

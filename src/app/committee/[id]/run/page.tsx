@@ -13,14 +13,18 @@ import { Speakers } from '@/components/chair/Speakers';
 import { Caucus } from '@/components/chair/Caucus';
 import { Motions } from '@/components/chair/Motions';
 import { Voting } from '@/components/chair/Voting';
+import { Participation } from '@/components/chair/Participation';
+import { GradingLog } from '@/components/chair/GradingLog';
 import { MODE_LABEL } from '@/lib/config';
 import { useClockSync, useCommittee, useCommitteeState, useRows } from '@/lib/hooks';
-import { Delegate, EventRow } from '@/lib/types';
+import { closeSession, openSession } from '@/lib/session';
+import { Delegate, EventRow, SessionRow } from '@/lib/types';
 
 function Console({ id }: { id: string }) {
   const { canRun } = useAuth();
   const { committee, missing } = useCommittee(id);
-  const { state, update } = useCommitteeState(id);
+  const { state, update, refresh } = useCommitteeState(id);
+  const { rows: sessions } = useRows<SessionRow>('sessions', id, 'number');
   const { rows: delegates } = useRows<Delegate>('delegates', id, 'country');
   const { rows: events } = useRows<EventRow>('events', id, 'created_at', false);
   const [tab, setTab] = useLocalState<string>(`mp-tab-${id}`, 'roll');
@@ -41,8 +45,15 @@ function Console({ id }: { id: string }) {
   const present = delegates.filter((d) => d.attendance !== 'absent').length;
   const pendingMotions = events.filter((e) => e.kind === 'motion' && e.status === 'pending').length;
 
-  const setStatus = (status: typeof state.status) =>
-    update(status === 'in_session' && !state.session_started_at ? { status, session_started_at: new Date().toISOString() } : { status });
+  const currentSession = sessions.find((s) => s.id === state.current_session_id) || null;
+  const nextSessionNumber = (sessions.reduce((m, s) => Math.max(m, s.number), 0) || 0) + 1;
+
+  // Starting a session numbers it and saves the roll call; suspending/adjourning closes it.
+  async function setStatus(status: typeof state.status) {
+    if (status === 'in_session') await openSession(id);
+    else if (status === 'suspended' || status === 'adjourned') await closeSession(id, status);
+    refresh();
+  }
 
   return (
     <main className="mx-auto max-w-7xl space-y-4 px-4 py-6">
@@ -55,6 +66,7 @@ function Console({ id }: { id: string }) {
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
             <StatusBadge status={state.status} />
+            {currentSession && <span className="badge bg-brand/10 text-brand">Session {currentSession.number}</span>}
             {state.status === 'in_session' && <span className="badge bg-slate-100 text-slate-700">{MODE_LABEL[state.mode]}</span>}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
@@ -73,6 +85,13 @@ function Console({ id }: { id: string }) {
         </div>
       </div>
 
+      {state.status === 'in_session' && !currentSession && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="flex-1">This committee is in session but has no session record yet, so roll call history and grading are not being saved.</span>
+          <button className="btn btn-sm bg-amber-500 text-black hover:bg-amber-400" onClick={async () => { await openSession(id); refresh(); }}>Start Session {nextSessionNumber} now</button>
+        </div>
+      )}
+
       <AnnouncementBanner max={2} />
 
       <Tabs
@@ -84,16 +103,20 @@ function Console({ id }: { id: string }) {
           { id: 'caucus', label: 'Caucus' },
           { id: 'motions', label: 'Points & motions', count: pendingMotions },
           { id: 'voting', label: 'Voting' },
+          { id: 'participation', label: 'Participation' },
+          { id: 'log', label: 'Grading log' },
           { id: 'docs', label: 'Documents' },
         ]}
       />
 
       <div className="pt-1">
-        {tab === 'roll' && <RollCall committeeId={id} />}
+        {tab === 'roll' && <RollCall committeeId={id} state={state} />}
         {tab === 'floor' && <Speakers committeeId={id} state={state} update={update} />}
         {tab === 'caucus' && <Caucus committeeId={id} state={state} update={update} />}
-        {tab === 'motions' && <Motions committeeId={id} state={state} update={update} />}
+        {tab === 'motions' && <Motions committeeId={id} state={state} update={update} refresh={refresh} />}
         {tab === 'voting' && <Voting committeeId={id} state={state} update={update} />}
+        {tab === 'participation' && <Participation committeeId={id} state={state} />}
+        {tab === 'log' && <GradingLog committeeId={id} committeeName={committee.name} />}
         {tab === 'docs' && <Documents committeeId={id} />}
       </div>
     </main>

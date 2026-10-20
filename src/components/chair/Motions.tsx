@@ -2,10 +2,10 @@
 import { useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRows } from '@/lib/hooks';
-import { MOTION_TYPES, POINT_TYPES, labelFor } from '@/lib/config';
-import { motionPatch } from '@/lib/session';
+import { MOTION_TYPES, POINT_TYPES, codeFor, labelFor } from '@/lib/config';
+import { applyMotionEffects } from '@/lib/session';
 import { toast, toastError } from '@/lib/toast';
-import { CommitteeState, Delegate, EventRow } from '@/lib/types';
+import { CommitteeState, Delegate, EventRow, SessionRow } from '@/lib/types';
 import { Empty, Field, Seg } from '../ui';
 
 const STATUS_TONE: Record<string, string> = {
@@ -17,23 +17,37 @@ const STATUS_TONE: Record<string, string> = {
   out_of_order: 'bg-red-100 text-red-700',
 };
 
-export function Motions({ committeeId, update }: { committeeId: string; state: CommitteeState; update: (p: Partial<CommitteeState>) => Promise<boolean> }) {
+export function Motions({
+  committeeId,
+  state,
+  update,
+  refresh,
+}: {
+  committeeId: string;
+  state: CommitteeState;
+  update: (p: Partial<CommitteeState>) => Promise<boolean>;
+  refresh: () => void;
+}) {
   const { rows: delegates } = useRows<Delegate>('delegates', committeeId, 'country');
   const { rows: events } = useRows<EventRow>('events', committeeId, 'created_at', false);
+  const { rows: sessions } = useRows<SessionRow>('sessions', committeeId, 'number');
   const [kind, setKind] = useState<'motion' | 'point'>('motion');
-  const [type, setType] = useState(MOTION_TYPES[2].value);
+  const [type, setType] = useState('moderated_caucus');
   const [delegateId, setDelegateId] = useState('');
   const [details, setDetails] = useState('');
   const [durationMin, setDurationMin] = useState(10);
   const [speakingSec, setSpeakingSec] = useState(60);
+  const [scope, setScope] = useState<'all' | 'current'>('all');
+  const [reasons, setReasons] = useState<Record<string, string>>({});
 
   const byId = useMemo(() => new Map(delegates.map((d) => [d.id, d])), [delegates]);
+  const sessionNo = useMemo(() => new Map(sessions.map((s) => [s.id, s.number])), [sessions]);
   const motionDef = MOTION_TYPES.find((m) => m.value === type);
   const present = delegates.filter((d) => d.attendance !== 'absent');
 
   function switchKind(k: 'motion' | 'point') {
     setKind(k);
-    setType(k === 'motion' ? MOTION_TYPES[2].value : POINT_TYPES[0].value);
+    setType(k === 'motion' ? 'moderated_caucus' : POINT_TYPES[0].value);
   }
 
   async function log() {
@@ -54,14 +68,13 @@ export function Motions({ committeeId, update }: { committeeId: string; state: C
   }
 
   async function setStatus(ev: EventRow, status: string) {
-    const { error } = await supabase().from('events').update({ status }).eq('id', ev.id);
+    const reason = (reasons[ev.id] || '').trim() || null;
+    const { error } = await supabase().from('events').update({ status, reason }).eq('id', ev.id);
     if (error) return toastError(error);
+    setReasons((r) => ({ ...r, [ev.id]: '' }));
     if (ev.kind === 'motion' && status === 'passed') {
-      const patch = motionPatch(ev);
-      if (patch) {
-        await update(patch);
-        toast(ev.type.includes('caucus') ? 'Motion passed. Caucus is ready on the Caucus tab.' : 'Motion passed and applied.', 'success');
-      }
+      const msg = await applyMotionEffects(ev, committeeId, state, update, refresh);
+      if (msg) toast(msg, 'success');
     }
   }
   async function del(id: string) {
@@ -69,7 +82,9 @@ export function Motions({ committeeId, update }: { committeeId: string; state: C
     if (error) toastError(error);
   }
 
+  const visible = scope === 'current' && state.current_session_id ? events.filter((e) => e.session_id === state.current_session_id) : events;
   const pending = events.filter((e) => e.kind === 'motion' && e.status === 'pending');
+  const list = kind === 'motion' ? MOTION_TYPES : POINT_TYPES;
 
   return (
     <div className="grid gap-4 lg:grid-cols-5">
@@ -77,7 +92,7 @@ export function Motions({ committeeId, update }: { committeeId: string; state: C
         <Seg<'motion' | 'point'> value={kind} onChange={switchKind} options={[{ value: 'motion', label: 'Motion' }, { value: 'point', label: 'Point' }]} />
         <Field label={kind === 'motion' ? 'Motion' : 'Point'}>
           <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-            {(kind === 'motion' ? MOTION_TYPES : POINT_TYPES).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+            {list.map((t) => <option key={t.value} value={t.value}>{t.code} · {t.label}</option>)}
           </select>
         </Field>
         <Field label="Raised by">
@@ -100,7 +115,11 @@ export function Motions({ committeeId, update }: { committeeId: string; state: C
           <input className="input" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="[Placeholder details]" />
         </Field>
         <button className="btn btn-primary w-full" onClick={log}>Log {kind}</button>
-        {kind === 'motion' && <p className="text-xs text-slate-400">Passing a caucus, speaking-time, suspension or adjournment motion applies it to the committee automatically.</p>}
+        {kind === 'motion' && (
+          <p className="text-xs text-slate-400">
+            Passing MOS opens the next session, MSS suspends it, and caucus / speaking-time / adjournment / open-debate motions are applied automatically.
+          </p>
+        )}
       </div>
 
       <div className="space-y-4 lg:col-span-3">
@@ -109,42 +128,61 @@ export function Motions({ committeeId, update }: { committeeId: string; state: C
             <b>{pending.length}</b> motion{pending.length > 1 ? 's' : ''} on the floor. Vote in order of disruptiveness.
           </div>
         )}
-        {events.length === 0 ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm text-slate-500">{visible.length} entr{visible.length === 1 ? 'y' : 'ies'}</span>
+          <Seg<'all' | 'current'> value={scope} onChange={setScope} options={[{ value: 'all', label: 'All sessions' }, { value: 'current', label: 'Current session' }]} />
+        </div>
+        {visible.length === 0 ? (
           <Empty>No points or motions logged yet.</Empty>
         ) : (
           <ul className="space-y-2">
-            {events.map((ev) => (
-              <li key={ev.id} className="card p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`badge ${ev.kind === 'motion' ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-700'}`}>{ev.kind === 'motion' ? 'Motion' : 'Point'}</span>
-                  <span className="font-semibold">{labelFor(ev.kind === 'motion' ? MOTION_TYPES : POINT_TYPES, ev.type)}</span>
-                  <span className={`badge ${STATUS_TONE[ev.status] || 'bg-slate-100 text-slate-600'}`}>{ev.status.replace('_', ' ')}</span>
-                  <span className="ml-auto text-xs text-slate-400">{new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <div className="mt-1 text-sm text-slate-600">
-                  {ev.delegate_id ? <b>{byId.get(ev.delegate_id)?.country}</b> : 'Delegate unspecified'}
-                  {ev.duration_sec ? ` · ${ev.duration_sec / 60} min` : ''}
-                  {ev.speaking_sec ? ` · ${ev.speaking_sec}s speaking` : ''}
-                  {ev.details ? ` · ${ev.details}` : ''}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {ev.kind === 'motion' && ev.status === 'pending' && (
-                    <>
-                      <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'passed')}>Pass</button>
-                      <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'failed')}>Fail</button>
-                      <button className="btn btn-secondary btn-sm" onClick={() => setStatus(ev, 'withdrawn')}>Withdraw</button>
-                    </>
+            {visible.map((ev) => {
+              const open = (ev.kind === 'motion' && ev.status === 'pending') || (ev.kind === 'point' && ev.status === 'raised');
+              return (
+                <li key={ev.id} className="card p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`badge ${ev.kind === 'motion' ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-700'}`}>{codeFor(ev.kind === 'motion' ? MOTION_TYPES : POINT_TYPES, ev.type) || (ev.kind === 'motion' ? 'Motion' : 'Point')}</span>
+                    <span className="font-semibold">{labelFor(ev.kind === 'motion' ? MOTION_TYPES : POINT_TYPES, ev.type)}</span>
+                    <span className={`badge ${STATUS_TONE[ev.status] || 'bg-slate-100 text-slate-600'}`}>{ev.status.replace('_', ' ')}</span>
+                    <span className="ml-auto text-xs text-slate-400">
+                      {ev.session_id && sessionNo.has(ev.session_id) ? `S${sessionNo.get(ev.session_id)} · ` : ''}
+                      {new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {ev.delegate_id ? <b>{byId.get(ev.delegate_id)?.country}</b> : 'Delegate unspecified'}
+                    {ev.duration_sec ? ` · ${ev.duration_sec / 60} min` : ''}
+                    {ev.speaking_sec ? ` · ${ev.speaking_sec}s speaking` : ''}
+                    {ev.details ? ` · ${ev.details}` : ''}
+                  </div>
+                  {ev.reason && <div className="mt-1 text-xs italic text-slate-500">Reason: {ev.reason}</div>}
+                  {open && (
+                    <input
+                      className="input mt-2"
+                      placeholder="Reason / note (optional), e.g. did not pass due to time concerns"
+                      value={reasons[ev.id] || ''}
+                      onChange={(e) => setReasons((r) => ({ ...r, [ev.id]: e.target.value }))}
+                    />
                   )}
-                  {ev.kind === 'point' && ev.status === 'raised' && (
-                    <>
-                      <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'addressed')}>Addressed</button>
-                      <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'out_of_order')}>Out of order</button>
-                    </>
-                  )}
-                  <button className="btn btn-ghost btn-sm ml-auto text-slate-400" onClick={() => del(ev.id)}>Delete</button>
-                </div>
-              </li>
-            ))}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {ev.kind === 'motion' && ev.status === 'pending' && (
+                      <>
+                        <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'passed')}>Pass</button>
+                        <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'failed')}>Fail</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setStatus(ev, 'withdrawn')}>Withdraw</button>
+                      </>
+                    )}
+                    {ev.kind === 'point' && ev.status === 'raised' && (
+                      <>
+                        <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'addressed')}>Addressed</button>
+                        <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'out_of_order')}>Out of order</button>
+                      </>
+                    )}
+                    <button className="btn btn-ghost btn-sm ml-auto text-slate-400" onClick={() => del(ev.id)}>Delete</button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

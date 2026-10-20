@@ -69,7 +69,7 @@ export function System() {
         <div className="card space-y-3">
           <h3 className="font-bold">Archive &amp; reset</h3>
           <p className="text-sm text-slate-600">
-            Saves a full snapshot (committees, rosters, speakers, motions, points, votes, announcements, document records) as an archive for future High Command teams. Then a reset clears the live session: attendance, speakers’ lists, motions, points, votes, announcements and timers. Accounts, branding and uploaded files are kept.
+            Saves a full snapshot (committees, rosters, sessions and roll calls, speakers, motions, points, votes, participation grades, warnings, awards, announcements, document records) as an archive for future High Command teams. Then a reset clears the live session: attendance, sessions, speakers’ lists, motions, points, votes, grades, warnings, awards, announcements and timers. Accounts, branding and uploaded files are kept.
           </p>
           <Field label="Archive label"><input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="[Placeholder: PASMUN 2026 Day 1]" /></Field>
           <button className="btn btn-secondary" onClick={archiveOnly} disabled={busy}>Save archive only (no deletion)</button>

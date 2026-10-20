@@ -1,20 +1,44 @@
 'use client';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRows } from '@/lib/hooks';
 import { APP_CONFIG } from '@/lib/config';
 import { toast, toastError } from '@/lib/toast';
-import { Attendance, Delegate } from '@/lib/types';
+import { Absence, Attendance, CommitteeState, Delegate, SessionAttendance, SessionRow } from '@/lib/types';
 import { Empty, Seg, Spinner } from '../ui';
 
-export function RollCall({ committeeId }: { committeeId: string }) {
+const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+export function RollCall({ committeeId, state }: { committeeId: string; state: CommitteeState }) {
   const { rows: delegates, loading } = useRows<Delegate>('delegates', committeeId, 'country');
+  const { rows: sessions } = useRows<SessionRow>('sessions', committeeId, 'number');
+  const { rows: attendance } = useRows<SessionAttendance>('session_attendance', committeeId, 'id');
+  const { rows: absences } = useRows<Absence>('delegate_absences', committeeId, 'left_at');
   const [bulk, setBulk] = useState('');
   const [showManage, setShowManage] = useState(false);
+
+  const session = sessions.find((s) => s.id === state.current_session_id) || null;
+  const nextNumber = (sessions.reduce((m, s) => Math.max(m, s.number), 0) || 0) + 1;
+  const lateBy = useMemo(() => {
+    const m = new Map<string, boolean>();
+    for (const a of attendance) if (session && a.session_id === session.id) m.set(a.delegate_id, a.late);
+    return m;
+  }, [attendance, session]);
+  const outBy = useMemo(() => {
+    const m = new Map<string, Absence>();
+    for (const a of absences) if (!a.returned_at) m.set(a.delegate_id, a);
+    return m;
+  }, [absences]);
+  const stepOuts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const a of absences) if (session && a.session_id === session.id) m.set(a.delegate_id, (m.get(a.delegate_id) || 0) + 1);
+    return m;
+  }, [absences, session]);
 
   const total = delegates.length;
   const present = delegates.filter((d) => d.attendance !== 'absent').length;
   const voting = delegates.filter((d) => d.attendance === 'present_and_voting').length;
+  const late = delegates.filter((d) => lateBy.get(d.id) && d.attendance !== 'absent').length;
   const debateQuorum = Math.ceil(total * APP_CONFIG.quorum.debateFraction);
   const majority = Math.floor(total * APP_CONFIG.quorum.majorityFraction) + 1;
 
@@ -24,6 +48,23 @@ export function RollCall({ committeeId }: { committeeId: string }) {
   }
   async function markAll(attendance: Attendance) {
     const { error } = await supabase().from('delegates').update({ attendance }).eq('committee_id', committeeId);
+    if (error) toastError(error);
+  }
+  async function toggleLate(d: Delegate) {
+    if (!session) return;
+    const { error } = await supabase()
+      .from('session_attendance')
+      .update({ late: !lateBy.get(d.id) })
+      .eq('session_id', session.id)
+      .eq('delegate_id', d.id);
+    if (error) toastError(error);
+  }
+  async function stepOut(d: Delegate) {
+    const { error } = await supabase().from('delegate_absences').insert({ committee_id: committeeId, delegate_id: d.id });
+    if (error) toastError(error);
+  }
+  async function returned(a: Absence) {
+    const { error } = await supabase().from('delegate_absences').update({ returned_at: new Date().toISOString() }).eq('id', a.id);
     if (error) toastError(error);
   }
   async function addBulk() {
@@ -52,9 +93,23 @@ export function RollCall({ committeeId }: { committeeId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+        {session ? (
+          <>
+            <b>Session {session.number}</b> is open. Delegates who arrive after it opened are flagged <span className="font-semibold text-amber-700">late</span> automatically.
+          </>
+        ) : (
+          <>
+            Taking roll call for <b>Session {nextNumber}</b>. Press <b>Call to order</b> (or pass an Open session motion) to start it and save this roll call.
+          </>
+        )}
+        <span className="block text-xs text-slate-500">Roll call is saved per session and resets when a session is suspended or adjourned.</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Stat label="Present" value={`${present} / ${total}`} />
         <Stat label="Present & voting" value={String(voting)} />
+        <Stat label="Late" value={String(late)} />
         <Stat label={`Debate quorum (${debateQuorum})`} value={present >= debateQuorum && total > 0 ? 'Met' : 'Not met'} good={present >= debateQuorum && total > 0} />
         <Stat label={`Majority (${majority})`} value={present >= majority && total > 0 ? 'Present' : 'Short'} good={present >= majority && total > 0} />
       </div>
@@ -77,24 +132,43 @@ export function RollCall({ committeeId }: { committeeId: string }) {
         <Empty>No delegates yet. Use “Manage delegate list” to add the roll.</Empty>
       ) : (
         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
-          {delegates.map((d) => (
-            <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{d.country}</div>
-                <div className="truncate text-xs text-slate-500">{d.name || 'Delegate name placeholder'}</div>
+          {delegates.map((d) => {
+            const out = outBy.get(d.id);
+            const isPresent = d.attendance !== 'absent';
+            return (
+              <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="truncate font-semibold">{d.country}</span>
+                    {isPresent && lateBy.get(d.id) && <span className="badge bg-amber-100 text-amber-800">Late</span>}
+                    {out && <span className="badge bg-red-100 text-red-700">Out since {hhmm(out.left_at)}</span>}
+                    {!out && (stepOuts.get(d.id) || 0) > 0 && <span className="text-xs text-slate-400">stepped out {stepOuts.get(d.id)}×</span>}
+                  </div>
+                  <div className="truncate text-xs text-slate-500">{d.name || 'Delegate name placeholder'}</div>
+                </div>
+                {isPresent && session && (
+                  <button className={`btn btn-sm ${lateBy.get(d.id) ? 'bg-amber-100 text-amber-800' : 'btn-ghost'}`} onClick={() => toggleLate(d)} title="Toggle late flag">
+                    Late
+                  </button>
+                )}
+                {isPresent && (out ? (
+                  <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => returned(out)}>Returned</button>
+                ) : (
+                  <button className="btn btn-secondary btn-sm" onClick={() => stepOut(d)} title="Log that this delegate left the room">Step out</button>
+                ))}
+                <Seg<Attendance>
+                  value={d.attendance}
+                  onChange={(v) => mark(d.id, v)}
+                  options={[
+                    { value: 'absent', label: 'Absent', tone: 'bg-slate-700 text-white' },
+                    { value: 'present', label: 'Present', tone: 'bg-emerald-600 text-white' },
+                    { value: 'present_and_voting', label: 'P&V', tone: 'bg-brand text-white' },
+                  ]}
+                />
+                {showManage && <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>Remove</button>}
               </div>
-              <Seg<Attendance>
-                value={d.attendance}
-                onChange={(v) => mark(d.id, v)}
-                options={[
-                  { value: 'absent', label: 'Absent', tone: 'bg-slate-700 text-white' },
-                  { value: 'present', label: 'Present', tone: 'bg-emerald-600 text-white' },
-                  { value: 'present_and_voting', label: 'P&V', tone: 'bg-brand text-white' },
-                ]}
-              />
-              {showManage && <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>Remove</button>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

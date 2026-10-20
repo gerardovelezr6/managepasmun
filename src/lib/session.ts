@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { nowMs } from './clock';
 import { emptyTimer, resetTimer, startTimer } from './timer';
+import { toastError } from './toast';
 import { CommitteeState, EventRow, VoteRecord, VoteRow } from './types';
 
 type Updater = (patch: Partial<CommitteeState>) => Promise<boolean>;
@@ -67,4 +68,67 @@ export const THRESHOLD_LABEL: Record<string, string> = { simple: 'Simple majorit
 export function countryOf(delegates: { id: string; country: string; name: string }[], id: string | null | undefined) {
   if (!id) return null;
   return delegates.find((d) => d.id === id) || null;
+}
+
+// ───────── Sessions ─────────
+// Opening a session numbers it, snapshots the roll call and puts the committee in session.
+export async function openSession(committeeId: string) {
+  const { error } = await supabase().rpc('open_session', { p_committee: committeeId });
+  if (error) toastError(error);
+  return !error;
+}
+
+// Closing a session (suspend / adjourn) saves its roll call; the next session starts with a fresh roll call.
+export async function closeSession(committeeId: string, status: 'suspended' | 'adjourned') {
+  const { error } = await supabase().rpc('close_session', { p_committee: committeeId, p_status: status });
+  if (error) toastError(error);
+  return !error;
+}
+
+// Runs the effect of a motion that just passed. Returns a short message for the chair, or null.
+export async function applyMotionEffects(
+  ev: EventRow,
+  committeeId: string,
+  state: CommitteeState,
+  update: (patch: Partial<CommitteeState>) => Promise<boolean>,
+  refresh: () => void
+): Promise<string | null> {
+  switch (ev.type) {
+    case 'open_session':
+      if (state.status === 'in_session' && state.current_session_id) return 'A session is already open. Suspend it first to open the next one.';
+      if (await openSession(committeeId)) {
+        refresh();
+        return 'Session opened. Remember to take roll call.';
+      }
+      return null;
+    case 'suspend_session':
+      if (await closeSession(committeeId, 'suspended')) {
+        refresh();
+        return 'Session suspended and saved. The next session starts with a new roll call.';
+      }
+      return null;
+    case 'adjourn':
+      if (await closeSession(committeeId, 'adjourned')) {
+        refresh();
+        return 'Meeting adjourned and session saved.';
+      }
+      return null;
+    case 'open_debate':
+      await update({ mode: 'formal', caucus_topic: null, caucus_speaking_sec: null });
+      return 'Debate opened: back to the speakers\u2019 list.';
+    case 'close_debate':
+      return 'Debate closed. Open the vote in the Voting tab.';
+    case 'finish_reading_pp':
+      return 'Motion passed: finish reading position papers.';
+    case 'extraordinary_questions':
+      return 'Motion passed: extraordinary session of questions.';
+    default: {
+      const patch = motionPatch(ev);
+      if (patch) {
+        await update(patch);
+        return ev.type.includes('caucus') ? 'Motion passed. Caucus is ready on the Caucus tab.' : 'Motion passed and applied.';
+      }
+      return null;
+    }
+  }
 }
