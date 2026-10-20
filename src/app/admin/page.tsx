@@ -5,6 +5,7 @@ import { Tabs, useLocalState } from '@/components/ui';
 import { Analytics } from '@/components/admin/Analytics';
 import { Committees } from '@/components/admin/Committees';
 import { Users } from '@/components/admin/Users';
+import { Onboarding } from '@/components/admin/Onboarding';
 import { Announcements } from '@/components/admin/Announcements';
 import { Branding } from '@/components/admin/Branding';
 import { System } from '@/components/admin/System';
@@ -29,6 +30,7 @@ function Panel() {
           { id: 'grades', label: 'Participation & grades' },
           { id: 'rubric', label: 'Grading rubric' },
           { id: 'users', label: 'Users & roles' },
+          { id: 'onboarding', label: 'Invite & passwords' },
           { id: 'announcements', label: 'Announcements' },
           { id: 'documents', label: 'Global documents' },
           { id: 'branding', label: 'Branding' },
@@ -41,6 +43,7 @@ function Panel() {
         {tab === 'grades' && <ParticipationOverview />}
         {tab === 'rubric' && <RubricEditor />}
         {tab === 'users' && <Users />}
+        {tab === 'onboarding' && <Onboarding />}
         {tab === 'announcements' && <Announcements />}
         {tab === 'documents' && <Documents committeeId={null} />}
         {tab === 'branding' && <Branding />}
