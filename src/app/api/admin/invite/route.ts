@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, User } from '@supabase/supabase-js';
 import { adminClient, requireHighCommand, siteUrl } from '@/lib/serverAdmin';
 
 // Onboarding: High Command invites someone; Supabase sends its "Invite user" email and the person
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     if (error) {
       // If the email step failed (e.g. SMTP not set up) the account may still exist: keep it so the link can be shared by hand.
       const list = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const existing = list.data?.users.find((u) => u.email?.toLowerCase() === addr);
+      const existing = ((list.data?.users ?? []) as User[]).find((u) => u.email?.toLowerCase() === addr);
       if (!existing || existing.email_confirmed_at) return fail(error.message);
       id = existing.id;
       emailError = error.message;
