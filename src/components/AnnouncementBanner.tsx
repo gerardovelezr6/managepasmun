@@ -1,17 +1,18 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useLiveReload } from '@/lib/hooks';
+import { useLiveReload, useTick } from '@/lib/hooks';
 import { Announcement } from '@/lib/types';
 
 export function useActiveAnnouncements() {
   const [items, setItems] = useState<Announcement[]>([]);
   useLiveReload(['announcements'], async () => {
     const { data } = await supabase().from('announcements').select('*').order('created_at', { ascending: false }).limit(20);
-    const now = Date.now();
-    setItems(((data || []) as Announcement[]).filter((a) => !a.expires_at || new Date(a.expires_at).getTime() > now));
+    setItems((data || []) as Announcement[]);
   });
-  return items;
+  useTick(10_000); // re-check every few seconds so scheduled announcements appear (and expire) on time
+  const now = Date.now();
+  return items.filter((a) => (!a.starts_at || new Date(a.starts_at).getTime() <= now) && (!a.expires_at || new Date(a.expires_at).getTime() > now));
 }
 
 export function AnnouncementBanner({ max = 3 }: { max?: number }) {

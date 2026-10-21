@@ -130,6 +130,7 @@ export interface Announcement {
   id: string;
   message: string;
   severity: 'info' | 'urgent';
+  starts_at: string | null;
   expires_at: string | null;
   created_at: string;
 }
