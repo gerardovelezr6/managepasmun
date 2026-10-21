@@ -4,7 +4,7 @@
 -- ───────────────────────── Settings / branding ─────────────────────────
 create table if not exists public.settings (
   id int primary key default 1 check (id = 1),
-  conference_name text not null default 'PASMUN 2026 (Placeholder Name)',
+  conference_name text not null default 'PASMUN',
   short_name text not null default 'PASMUN',
   tagline text not null default 'Placeholder tagline - edit me in Admin > Branding',
   conference_dates text not null default '[Placeholder dates]',

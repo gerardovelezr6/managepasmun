@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* One-line text that scrolls sideways when it doesn't fit (long committee topics). */
+.scroll-x { overflow-x: auto; white-space: nowrap; scrollbar-width: thin; }
+
 :root {
   --brand: 30 64 175;
   --accent: 245 158 11;

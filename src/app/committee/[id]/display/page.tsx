@@ -65,7 +65,7 @@ export default function DisplayPage() {
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">{settings.conference_name}</div>
           <h1 className="truncate text-3xl font-extrabold">{committee.name}</h1>
-          <p className="truncate text-lg text-slate-300">Topic: {committee.topic}</p>
+          <p className="scroll-x text-lg text-slate-300">Topic: {committee.topic}</p>
         </div>
         <div className="text-right">
           <div
@@ -106,7 +106,6 @@ export default function DisplayPage() {
               )}
               <div className="text-lg font-semibold uppercase tracking-[0.25em] text-slate-400">{speaker ? 'Now speaking' : 'Floor is open'}</div>
               <div className="mt-2 text-7xl font-black leading-tight">{speaker ? speaker.country : '—'}</div>
-              {speaker?.name && <div className="mt-1 text-2xl text-slate-300">{speaker.name}</div>}
               <LiveTimer timer={state.speaker_timer} className="mt-6 block font-mono text-[9rem] font-black leading-none" />
             </div>
           )}

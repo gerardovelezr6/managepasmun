@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'ManagePASMUN',
   description: 'Live committee management for High Command and Chairs',
   robots: { index: false, follow: false },
+  icons: { icon: '/brand-icon' },
 };
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1 };

@@ -4,7 +4,7 @@
 
 export const APP_CONFIG = {
   appName: 'ManagePASMUN',
-  fallbackConferenceName: 'PASMUN 2026 (Placeholder Name)',
+  fallbackConferenceName: 'PASMUN',
   fallbackShortName: 'PASMUN',
   fallbackTagline: 'Placeholder tagline',
   fallbackPrimary: '#1e40af',
