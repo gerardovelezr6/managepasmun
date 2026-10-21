@@ -92,7 +92,7 @@ export function Committees() {
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-bold uppercase tracking-wider text-brand">{c.abbreviation}</div>
                   <div className="truncate font-bold">{c.name}</div>
-                  <div className="truncate text-sm text-slate-500">{c.topic}</div>
+                  <div className="scroll-x text-sm text-slate-500">{c.topic}</div>
                   <div className="mt-1 text-xs text-slate-500">{counts[c.id] || 0} delegates · Chairs: {chairNames.length ? chairNames.join(', ') : <i>none assigned</i>}</div>
                 </div>
                 <Link href={`/committee/${c.id}/run`} className="btn btn-primary btn-sm">Run</Link>

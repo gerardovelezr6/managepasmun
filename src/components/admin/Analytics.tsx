@@ -4,22 +4,35 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useLiveReload, useTick } from '@/lib/hooks';
 import { MODE_LABEL } from '@/lib/config';
-import { CommitteeAnalytics } from '@/lib/types';
+import { CommitteeAnalytics, SessionRow } from '@/lib/types';
 import { Empty, StatusBadge } from '../ui';
 
-function elapsed(from: string | null) {
-  if (!from) return '—';
-  const m = Math.max(0, Math.floor((Date.now() - new Date(from).getTime()) / 60000));
+// Time actually spent in session: each session counts from opening until it was suspended/adjourned,
+// so the clock stands still between sessions.
+function elapsed(r: CommitteeAnalytics, sessions: SessionRow[]) {
+  const mine = sessions.filter((s) => s.committee_id === r.committee_id);
+  let ms = 0;
+  if (mine.length) {
+    for (const s of mine) ms += Math.max(0, (s.closed_at ? new Date(s.closed_at).getTime() : Date.now()) - new Date(s.opened_at).getTime());
+  } else if (r.status === 'in_session' && r.session_started_at) {
+    ms = Date.now() - new Date(r.session_started_at).getTime(); // committee started before sessions were tracked
+  } else return '—';
+  const m = Math.max(0, Math.floor(ms / 60000));
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
 }
 
 export function Analytics() {
   const [rows, setRows] = useState<CommitteeAnalytics[]>([]);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [updated, setUpdated] = useState<Date | null>(null);
   useTick(30_000);
 
-  useLiveReload(['committees', 'committee_state', 'delegates', 'speakers_list', 'events', 'votes'], async () => {
-    const { data } = await supabase().from('committee_analytics').select('*').order('name');
+  useLiveReload(['committees', 'committee_state', 'delegates', 'speakers_list', 'events', 'votes', 'sessions'], async () => {
+    const [{ data }, { data: ss }] = await Promise.all([
+      supabase().from('committee_analytics').select('*').order('name'),
+      supabase().from('sessions').select('*'),
+    ]);
+    setSessions((ss || []) as SessionRow[]);
     setRows(((data || []) as any[]).map((r) => ({ ...r, delegates_total: +r.delegates_total, delegates_present: +r.delegates_present, speakers_queued: +r.speakers_queued, speeches_given: +r.speeches_given, motions_total: +r.motions_total, motions_passed: +r.motions_passed, points_total: +r.points_total, votes_total: +r.votes_total, votes_open: +r.votes_open })));
     setUpdated(new Date());
   });
@@ -70,7 +83,7 @@ export function Analytics() {
                   <tr key={r.committee_id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <Link href={`/committee/${r.committee_id}/run`} className="font-semibold hover:text-brand">{r.name}</Link>
-                      <div className="max-w-xs truncate text-xs text-slate-500">{r.topic}</div>
+                      <div className="scroll-x max-w-xs text-xs text-slate-500">{r.topic}</div>
                     </td>
                     <td className="px-3 py-3">
                       <StatusBadge status={r.status} />
@@ -87,7 +100,7 @@ export function Analytics() {
                     <td className="px-3 py-3 text-right tabular-nums">{r.motions_total} <span className="text-slate-400">({r.motions_passed})</span></td>
                     <td className="px-3 py-3 text-right tabular-nums">{r.points_total}</td>
                     <td className="px-3 py-3 text-right tabular-nums">{r.votes_total}{r.votes_open > 0 && <span className="ml-1 badge bg-amber-100 text-amber-800">open</span>}</td>
-                    <td className="px-3 py-3 text-right tabular-nums text-slate-500">{r.status === 'not_started' ? '—' : elapsed(r.session_started_at)}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-slate-500">{elapsed(r, sessions)}</td>
                   </tr>
                 );
               })}

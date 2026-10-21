@@ -61,7 +61,7 @@ function Console({ id }: { id: string }) {
         <div className="min-w-0 flex-1">
           <div className="text-xs font-bold uppercase tracking-wider text-brand">{committee.abbreviation}</div>
           <h1 className="truncate text-xl font-bold">{committee.name}</h1>
-          <p className="truncate text-sm text-slate-500">{committee.topic}</p>
+          <p className="scroll-x text-sm text-slate-500">{committee.topic}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
