@@ -74,3 +74,14 @@ Each committee has one `committee_state` row. Timers store *remaining time + sta
 - The access code is an **application-level gate** (signed, expiring, httpOnly cookie, enforced in middleware). Committee floor data (rosters, speakers' list, motions, votes) is readable with the public anon key, because the projection screen needs it without a login. Documents, users, archives and all writes are protected by RLS and require a chair/High Command login. If you need the floor data hidden from anyone with the anon key, move the projection reads behind a server route.
 - Roles are only granted by High Command through the server API; `raw_user_meta_data` is never trusted, and new auth users default to `pending` (no access).
 - Access-code attempts are throttled per server instance (best effort, in memory).
+
+## Inviting users by email (Invite & passwords tab)
+
+High Command → **Invite & passwords** creates an account and emails the person a link to choose their own password (`/set-password`). Passwords people choose are hashed by Supabase and can't be viewed by anyone; you only see the temporary password shown once at creation.
+
+One-time Supabase setup so the emailed links don't point to `localhost:3000`:
+
+1. **Authentication → URL Configuration → Site URL**: your live address, e.g. `https://managepasmun.vercel.app`.
+2. **Redirect URLs**: add `https://managepasmun.vercel.app/set-password` (or `https://managepasmun.vercel.app/**`).
+3. Vercel → Settings → Environment Variables: `NEXT_PUBLIC_SITE_URL` = the same address, then redeploy.
+4. Supabase's built-in email sender allows only a few emails per hour. For a whole conference, add your own SMTP under **Authentication → Emails → SMTP Settings**. Until then, use **Copy link** to share a link by hand.

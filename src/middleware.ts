@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ACCESS_COOKIE, verifyAccessToken } from '@/lib/access';
 
-const OPEN_PATHS = ['/access', '/api/access'];
+// /set-password is opened from an emailed link; the one-time token in the link is its credential.
+const OPEN_PATHS = ['/access', '/api/access', '/set-password'];
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
