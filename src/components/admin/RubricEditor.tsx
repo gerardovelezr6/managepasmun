@@ -55,11 +55,13 @@ export function RubricEditor() {
 
   return (
     <div className="space-y-4">
-      <div className="card flex flex-wrap items-end gap-3">
-        <Field label="Points per right of explanation given" hint="Added to a delegate's total each time an explanation (In favor / Against) is marked given.">
-          <input type="number" min={0} step="0.5" className="input w-28" value={pts} onChange={(e) => setPts(e.target.value)} />
-        </Field>
-        <button className="btn btn-primary" onClick={savePts}>Save</button>
+      <div className="card">
+        <label className="label" htmlFor="expl-pts">Points per right of explanation given</label>
+        <div className="flex items-center gap-3">
+          <input id="expl-pts" type="number" min={0} step="0.5" className="input w-28" value={pts} onChange={(e) => setPts(e.target.value)} />
+          <button className="btn btn-primary" onClick={savePts}>Save</button>
+        </div>
+        <p className="mt-1.5 text-xs text-slate-500">Added to a delegate's total each time an explanation (In favor / Against) is marked given.</p>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
