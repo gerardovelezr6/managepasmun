@@ -7,6 +7,10 @@ import { Announcement } from '@/lib/types';
 import { useAuth } from '../AuthProvider';
 import { Empty, Field, Seg } from '../ui';
 
+// 12-hour clock, no seconds, e.g. "10/21/2026, 2:30 PM".
+const fmt12 = (d: string | Date) =>
+  new Date(d).toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
 export function Announcements() {
   const { session } = useAuth();
   const [items, setItems] = useState<Announcement[]>([]);
@@ -14,7 +18,10 @@ export function Announcements() {
   const [severity, setSeverity] = useState<Announcement['severity']>('info');
   const [expiresMin, setExpiresMin] = useState<number | ''>('');
   const [when, setWhen] = useState<'now' | 'later'>('now');
-  const [startAt, setStartAt] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [hour, setHour] = useState('12');
+  const [minute, setMinute] = useState('00');
+  const [ampm, setAmpm] = useState<'AM' | 'PM'>('PM');
   useTick(15_000);
 
   useLiveReload(['announcements'], async () => {
@@ -26,7 +33,9 @@ export function Announcements() {
     e.preventDefault();
     let start: Date | null = null;
     if (when === 'later') {
-      start = startAt ? new Date(startAt) : null; // datetime-local is read in this browser's time zone
+      // Read in this browser's time zone.
+      const h24 = (Number(hour) % 12) + (ampm === 'PM' ? 12 : 0);
+      start = startDate ? new Date(`${startDate}T${String(h24).padStart(2, '0')}:${minute}:00`) : null;
       if (!start || Number.isNaN(start.getTime())) return toastError('Pick the date and time to send it.');
       if (start.getTime() <= Date.now()) return toastError('That time has already passed. Pick a later time or choose Send now.');
     }
@@ -42,8 +51,8 @@ export function Announcements() {
     if (error) return toastError(error);
     setMessage('');
     setExpiresMin('');
-    setStartAt('');
-    toast(start ? `Scheduled for ${start.toLocaleString()}` : 'Sent to every dashboard and projection screen', 'success');
+    setStartDate('');
+    toast(start ? `Scheduled for ${fmt12(start)}` : 'Sent to every dashboard and projection screen', 'success');
   }
   async function remove(id: string) {
     const { error } = await supabase().from('announcements').delete().eq('id', id);
@@ -60,7 +69,22 @@ export function Announcements() {
         <Field label="When"><Seg<'now' | 'later'> value={when} onChange={setWhen} options={[{ value: 'now', label: 'Send now' }, { value: 'later', label: 'Schedule' }]} /></Field>
         {when === 'later' && (
           <Field label="Send at" hint="In your local time. It appears on every screen at that moment.">
-            <input type="datetime-local" required className="input" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+            <div className="space-y-2">
+              <input type="date" required className="input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <div className="flex items-center gap-2">
+                <select className="input" aria-label="Hour" value={hour} onChange={(e) => setHour(e.target.value)}>
+                  {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <span className="font-bold">:</span>
+                <select className="input" aria-label="Minute" value={minute} onChange={(e) => setMinute(e.target.value)}>
+                  {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <select className="input" aria-label="AM or PM" value={ampm} onChange={(e) => setAmpm(e.target.value as 'AM' | 'PM')}>
+                  <option>AM</option>
+                  <option>PM</option>
+                </select>
+              </div>
+            </div>
           </Field>
         )}
         <Field label="Auto-hide after (minutes)" hint={when === 'later' ? 'Counted from when it goes live. Leave blank to keep it up until deleted.' : 'Leave blank to keep it up until deleted.'}>
@@ -75,14 +99,14 @@ export function Announcements() {
             {items.map((a) => {
               const expired = a.expires_at && new Date(a.expires_at).getTime() <= now;
               const scheduled = a.starts_at && new Date(a.starts_at).getTime() > now;
-              const fmt = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+              const fmt = fmt12;
               return (
                 <li key={a.id} className="flex items-start gap-3 py-3">
                   <span className={`badge mt-0.5 ${a.severity === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>{a.severity}</span>
                   {scheduled && <span className="badge mt-0.5 bg-sky-100 text-sky-800">scheduled</span>}
                   <div className="min-w-0 flex-1">
                     <div className={`text-sm ${expired ? 'text-slate-400 line-through' : ''}`}>{a.message}</div>
-                    <div className="text-xs text-slate-400">{a.starts_at ? `${scheduled ? 'Goes live' : 'Went live'} ${fmt(a.starts_at)}` : new Date(a.created_at).toLocaleString()}{a.expires_at ? ` · ${expired ? 'expired' : 'expires'} ${fmt(a.expires_at)}` : ''}</div>
+                    <div className="text-xs text-slate-400">{a.starts_at ? `${scheduled ? 'Goes live' : 'Went live'} ${fmt(a.starts_at)}` : fmt(a.created_at)}{a.expires_at ? ` · ${expired ? 'expired' : 'expires'} ${fmt(a.expires_at)}` : ''}</div>
                   </div>
                   <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(a.id)}>{scheduled ? 'Cancel' : 'Delete'}</button>
                 </li>
