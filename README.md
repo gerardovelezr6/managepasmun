@@ -75,13 +75,12 @@ Each committee has one `committee_state` row. Timers store *remaining time + sta
 - Roles are only granted by High Command through the server API; `raw_user_meta_data` is never trusted, and new auth users default to `pending` (no access).
 - Access-code attempts are throttled per server instance (best effort, in memory).
 
-## Inviting users by email (Invite & passwords tab)
+## Inviting users (Invite & passwords tab)
 
-High Command → **Invite & passwords** creates an account and emails the person a link to choose their own password (`/set-password`). Passwords people choose are hashed by Supabase and can't be viewed by anyone; you only see the temporary password shown once at creation.
+High Command → **Invite & passwords** creates an account and gives you a one-time link. Hand it to the person privately; they open it, choose their own password on `/set-password` and are signed in. **Copy link** makes a fresh link for anyone later (first-time setup or a forgotten password). No email is sent, so no email provider is needed. Passwords people choose are hashed by Supabase and can't be viewed by anyone.
 
-One-time Supabase setup so the emailed links don't point to `localhost:3000`:
+One-time Supabase setup so links don't point to `localhost:3000`:
 
 1. **Authentication → URL Configuration → Site URL**: your live address, e.g. `https://managepasmun.vercel.app`.
 2. **Redirect URLs**: add `https://managepasmun.vercel.app/set-password` (or `https://managepasmun.vercel.app/**`).
 3. Vercel → Settings → Environment Variables: `NEXT_PUBLIC_SITE_URL` = the same address, then redeploy.
-4. Supabase's built-in email sender allows only a few emails per hour. For a whole conference, add your own SMTP under **Authentication → Emails → SMTP Settings**. Until then, use **Copy link** to share a link by hand.
