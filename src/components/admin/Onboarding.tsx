@@ -10,12 +10,10 @@ interface AuthStatus {
   invited_at: string | null;
   password_set_at: string | null;
   last_sign_in_at: string | null;
-  recovery_sent_at: string | null;
 }
 interface Created {
   email: string;
-  emailSent: boolean;
-  emailError: string | null;
+  link: string;
 }
 
 async function api(method: string, body?: unknown) {
@@ -78,24 +76,21 @@ export function Onboarding() {
     setBusy(false);
   }
 
-  async function resend(u: Profile) {
-    setWorking(u.id);
+  const copy = async (text: string) => {
     try {
-      await api('PATCH', { id: u.id, mode: 'email' });
-      toast(`Email sent to ${u.email}`, 'success');
-      await load();
-    } catch (err) {
-      toastError(err);
+      await navigator.clipboard.writeText(text);
+      toast('Copied', 'success');
+    } catch {
+      toast('Copy failed. Select the text instead.', 'error');
     }
-    setWorking(null);
-  }
+  };
 
   async function copyLink(u: Profile) {
     setWorking(u.id);
     try {
       const { link } = await api('PATCH', { id: u.id, mode: 'link' });
       await navigator.clipboard.writeText(link);
-      toast(`Set-password link for ${u.email} copied. Send it privately.`, 'success');
+      toast(`Link for ${u.email} copied. Send it privately.`, 'success');
     } catch (err) {
       toastError(err);
     }
@@ -107,7 +102,7 @@ export function Onboarding() {
       <div className="space-y-4">
         <form onSubmit={invite} className="card h-fit space-y-3">
           <h3 className="font-bold">Invite a new user</h3>
-          <p className="text-xs text-slate-500">They get Supabase’s invite email with a link to choose their own password.</p>
+          <p className="text-xs text-slate-500">You get a link to hand over. They open it and choose their own password. No email is sent.</p>
           <Field label="Full name"><input className="input" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="[Placeholder Name]" /></Field>
           <Field label="Email"><input type="email" required className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="chair@example.org" /></Field>
           <Field label="Role">
@@ -116,18 +111,17 @@ export function Onboarding() {
               <option value="high_command">High Command (Secretariat)</option>
             </select>
           </Field>
-          <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Inviting…' : 'Send invite'}</button>
+          <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Creating…' : 'Create link'}</button>
         </form>
 
         {created && (
           <div className="card space-y-2 border-brand">
-            <h3 className="font-bold">{created.email} was invited</h3>
-            {created.emailSent ? (
-              <p className="text-sm text-emerald-700">The invite email was sent.</p>
-            ) : (
-              <p className="text-sm text-red-600">The email could not be sent: {created.emailError}. Use “Copy link” in the list below to share the link yourself.</p>
-            )}
-            <p className="text-xs text-slate-500">They choose their own password from the link. Passwords people choose are encrypted and cannot be viewed by anyone.</p>
+            <h3 className="font-bold">Link for {created.email}</h3>
+            <div className="flex gap-2">
+              <input readOnly className="input font-mono text-xs" value={created.link} onFocus={(e) => e.target.select()} />
+              <button type="button" className="btn btn-secondary" onClick={() => copy(created.link)}>Copy</button>
+            </div>
+            <p className="text-xs text-slate-500">Send it privately. It works once and expires after a while; use “Copy link” in the list for a fresh one. Passwords people choose are encrypted and cannot be viewed by anyone.</p>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreated(null)}>Dismiss</button>
           </div>
         )}
@@ -145,17 +139,16 @@ export function Onboarding() {
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-semibold">{u.full_name || '(no name)'} <span className="ml-1 text-xs font-normal text-slate-400">{ROLE_LABEL[u.role] || u.role}</span></div>
                     <div className="truncate text-xs text-slate-500">{u.email}</div>
-                    <div className="text-xs text-slate-400">Last sign-in: {when(s?.last_sign_in_at ?? null)}{s?.recovery_sent_at ? ` · Email sent: ${when(s.recovery_sent_at)}` : ''}</div>
+                    <div className="text-xs text-slate-400">Last sign-in: {when(s?.last_sign_in_at ?? null)}</div>
                   </div>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${st.tone}`}>{st.text}</span>
-                  <button className="btn btn-secondary btn-sm" disabled={working === u.id} onClick={() => resend(u)}>Email link</button>
-                  <button className="btn btn-ghost btn-sm" disabled={working === u.id} onClick={() => copyLink(u)}>Copy link</button>
+                  <button className="btn btn-secondary btn-sm" disabled={working === u.id} onClick={() => copyLink(u)}>Copy link</button>
                 </div>
               );
             })}
           </div>
         )}
-        <p className="mt-3 text-xs text-slate-400">“Email link” re-sends the invite (or the password-reset email once they have joined). “Copy link” gives you the same link to pass on by hand if an email does not arrive.</p>
+        <p className="mt-3 text-xs text-slate-400">“Copy link” makes a fresh set-password link for that person. Use it for first-time setup or a forgotten password.</p>
       </div>
     </div>
   );
