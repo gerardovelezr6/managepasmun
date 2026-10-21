@@ -22,7 +22,10 @@ export async function requireHighCommand(req: NextRequest) {
 
 // Where emailed links should send people. Set NEXT_PUBLIC_SITE_URL on Vercel to your real domain.
 export function siteUrl(req: NextRequest) {
-  const fixed = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, '');
-  if (fixed) return fixed;
+  // Only the origin counts: a path pasted into the variable (e.g. /set-password) is ignored.
+  try {
+    const fixed = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+    if (fixed) return new URL(fixed).origin;
+  } catch {}
   return req.headers.get('origin') || req.nextUrl.origin;
 }
