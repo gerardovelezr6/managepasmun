@@ -148,6 +148,7 @@ create table if not exists public.announcements (
   message text not null,
   severity text not null default 'info' check (severity in ('info', 'urgent')),
   expires_at timestamptz,
+  starts_at timestamptz,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now()
 );

@@ -62,9 +62,9 @@ export function CommitteeGrid({ onlyMine = false }: { onlyMine?: boolean }) {
           {visible.map((c) => (
             <div key={c.id} className="card flex flex-col">
               <div className="flex items-start justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <div className="text-xs font-bold uppercase tracking-wider text-brand">{c.abbreviation}</div>
-                  <h3 className="text-base font-bold leading-snug">{c.name}</h3>
+                  <h3 className="break-words text-base font-bold leading-snug">{c.name}</h3>
                 </div>
                 <StatusBadge status={c.state?.status} />
               </div>
