@@ -14,7 +14,6 @@ interface AuthStatus {
 }
 interface Created {
   email: string;
-  tempPassword: string;
   emailSent: boolean;
   emailError: string | null;
 }
@@ -103,21 +102,12 @@ export function Onboarding() {
     setWorking(null);
   }
 
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast('Copied', 'success');
-    } catch {
-      toast('Copy failed. Select the text instead.', 'error');
-    }
-  };
-
-  return (
+    return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4">
         <form onSubmit={invite} className="card h-fit space-y-3">
           <h3 className="font-bold">Invite a new user</h3>
-          <p className="text-xs text-slate-500">They get an email with a link to choose their own password.</p>
+          <p className="text-xs text-slate-500">They get Supabase’s invite email with a link to choose their own password.</p>
           <Field label="Full name"><input className="input" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="[Placeholder Name]" /></Field>
           <Field label="Email"><input type="email" required className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="chair@example.org" /></Field>
           <Field label="Role">
@@ -126,25 +116,18 @@ export function Onboarding() {
               <option value="high_command">High Command (Secretariat)</option>
             </select>
           </Field>
-          <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Inviting…' : 'Create account and send email'}</button>
+          <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Inviting…' : 'Send invite'}</button>
         </form>
 
         {created && (
           <div className="card space-y-2 border-brand">
-            <h3 className="font-bold">{created.email} was created</h3>
+            <h3 className="font-bold">{created.email} was invited</h3>
             {created.emailSent ? (
-              <p className="text-sm text-emerald-700">The set-password email was sent.</p>
+              <p className="text-sm text-emerald-700">The invite email was sent.</p>
             ) : (
               <p className="text-sm text-red-600">The email could not be sent: {created.emailError}. Use “Copy link” in the list below to share the link yourself.</p>
             )}
-            <div>
-              <div className="label">Temporary password (shown only now)</div>
-              <div className="flex gap-2">
-                <input readOnly className="input font-mono" value={created.tempPassword} onFocus={(e) => e.target.select()} />
-                <button type="button" className="btn btn-secondary" onClick={() => copy(created.tempPassword)}>Copy</button>
-              </div>
-              <p className="mt-1 text-xs text-slate-500">It works until they set their own. Passwords people choose are encrypted and cannot be viewed by anyone.</p>
-            </div>
+            <p className="text-xs text-slate-500">They choose their own password from the link. Passwords people choose are encrypted and cannot be viewed by anyone.</p>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCreated(null)}>Dismiss</button>
           </div>
         )}
@@ -172,7 +155,7 @@ export function Onboarding() {
             })}
           </div>
         )}
-        <p className="mt-3 text-xs text-slate-400">“Email link” sends Supabase’s password-reset email. “Copy link” gives you the same link to pass on by hand if an email does not arrive.</p>
+        <p className="mt-3 text-xs text-slate-400">“Email link” re-sends the invite (or the password-reset email once they have joined). “Copy link” gives you the same link to pass on by hand if an email does not arrive.</p>
       </div>
     </div>
   );

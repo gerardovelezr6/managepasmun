@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { randomInt } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { adminClient, requireHighCommand, siteUrl } from '@/lib/serverAdmin';
 
-// Onboarding: High Command creates an account, the person gets Supabase's password-reset email
-// and chooses their own password on /set-password. User-chosen passwords are hashed by Supabase
-// and can never be read back; the only password High Command sees is the temporary one below.
+// Onboarding: High Command invites someone; Supabase sends its "Invite user" email and the person
+// chooses their own password on /set-password. Passwords are hashed by Supabase and can't be read back.
+// Accounts that already confirmed their email get the "Reset password" email instead.
 
 const ROLES = ['high_command', 'chair'];
-const ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const tempPassword = () => Array.from({ length: 14 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 async function sendResetEmail(req: NextRequest, email: string) {
@@ -50,19 +47,24 @@ export async function POST(req: NextRequest) {
     if (!ROLES.includes(role)) return fail('Invalid role');
 
     const sb = adminClient();
-    const password = tempPassword();
-    const { data, error } = await sb.auth.admin.createUser({
-      email: addr,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name, invited_at: new Date().toISOString() },
-    });
-    if (error || !data.user) return fail(error?.message || 'Could not create user');
-    const { error: pErr } = await sb.from('profiles').upsert({ id: data.user.id, email: addr, full_name, role });
+    const redirectTo = `${siteUrl(req)}/set-password`;
+    const meta = { full_name, invited_at: new Date().toISOString() };
+    const { data, error } = await sb.auth.admin.inviteUserByEmail(addr, { redirectTo, data: meta });
+    let id = data?.user?.id;
+    let emailError: string | null = null;
+    if (error) {
+      // If the email step failed (e.g. SMTP not set up) the account may still exist: keep it so the link can be shared by hand.
+      const list = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const existing = list.data?.users.find((u) => u.email?.toLowerCase() === addr);
+      if (!existing || existing.email_confirmed_at) return fail(error.message);
+      id = existing.id;
+      emailError = error.message;
+      await sb.auth.admin.updateUserById(id, { user_metadata: { ...existing.user_metadata, ...meta } });
+    }
+    if (!id) return fail('Could not create user');
+    const { error: pErr } = await sb.from('profiles').upsert({ id, email: addr, full_name, role });
     if (pErr) return fail(pErr.message, 500);
-
-    const emailError = await sendResetEmail(req, addr);
-    return NextResponse.json({ id: data.user.id, email: addr, tempPassword: password, emailSent: !emailError, emailError });
+    return NextResponse.json({ id, email: addr, emailSent: !emailError, emailError });
   } catch (e: any) {
     return fail(e.message, 500);
   }
@@ -78,17 +80,22 @@ export async function PATCH(req: NextRequest) {
     const { data: u, error } = await sb.auth.admin.getUserById(id);
     if (error || !u.user?.email) return fail(error?.message || 'User not found', 404);
     const email = u.user.email;
+    const redirectTo = `${siteUrl(req)}/set-password`;
+    const pending = !u.user.email_confirmed_at; // invited but never accepted
 
     if (mode === 'email') {
-      const emailError = await sendResetEmail(req, email);
-      if (emailError) return fail(emailError);
+      if (pending) {
+        const { error: iErr } = await sb.auth.admin.inviteUserByEmail(email, { redirectTo });
+        if (iErr) return fail(iErr.message);
+      } else {
+        const emailError = await sendResetEmail(req, email);
+        if (emailError) return fail(emailError);
+      }
       return NextResponse.json({ ok: true });
     }
-    const { data: link, error: lErr } = await sb.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo: `${siteUrl(req)}/set-password` },
-    });
+    const { data: link, error: lErr } = await sb.auth.admin.generateLink(
+      pending ? { type: 'invite', email, options: { redirectTo } } : { type: 'recovery', email, options: { redirectTo } }
+    );
     if (lErr || !link.properties?.action_link) return fail(lErr?.message || 'Could not create link');
     return NextResponse.json({ link: link.properties.action_link });
   } catch (e: any) {

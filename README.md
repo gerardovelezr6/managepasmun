@@ -77,7 +77,7 @@ Each committee has one `committee_state` row. Timers store *remaining time + sta
 
 ## Inviting users by email (Invite & passwords tab)
 
-High Command → **Invite & passwords** creates an account and emails the person a link to choose their own password (`/set-password`). Passwords people choose are hashed by Supabase and can't be viewed by anyone; you only see the temporary password shown once at creation.
+High Command → **Invite & passwords** creates an account and emails the person a link to choose their own password (`/set-password`). Passwords people choose are hashed by Supabase and can't be viewed by anyone; there is no way to view them.
 
 One-time Supabase setup so the emailed links don't point to `localhost:3000`:
 
