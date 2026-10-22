@@ -27,7 +27,7 @@ export function RequireAuth({ role, children }: { role?: 'high_command'; childre
       </div>
     );
   }
-  if (role === 'high_command' && profile.role !== 'high_command') {
+  if (role === 'high_command' && profile.role !== 'high_command' && profile.role !== 'advisor') {
     return (
       <div className="mx-auto mt-16 max-w-md card text-center">
         <h2 className="text-lg font-bold">High Command only</h2>

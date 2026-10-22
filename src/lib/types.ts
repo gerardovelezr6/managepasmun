@@ -1,4 +1,4 @@
-export type Role = 'high_command' | 'chair' | 'pending';
+export type Role = 'advisor' | 'high_command' | 'chair' | 'pending';
 export type SessionStatus = 'not_started' | 'in_session' | 'suspended' | 'adjourned';
 export type Mode = 'formal' | 'moderated' | 'unmoderated' | 'voting';
 export type Attendance = 'absent' | 'present' | 'present_and_voting';

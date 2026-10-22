@@ -84,3 +84,11 @@ One-time Supabase setup so links don't point to `localhost:3000`:
 1. **Authentication → URL Configuration → Site URL**: your live address, e.g. `https://managepasmun.vercel.app`.
 2. **Redirect URLs**: add `https://managepasmun.vercel.app/set-password` (or `https://managepasmun.vercel.app/**`).
 3. Vercel → Settings → Environment Variables: `NEXT_PUBLIC_SITE_URL` = the same address, then redeploy.
+
+## Advisor role
+
+Advisors can do everything High Command can. Only advisors can run the **full administrative reset** and create, change or remove other advisors (High Command can still save archives and manage chairs and High Command accounts).
+
+Run `supabase/migrations/005_advisor_role.sql` in the SQL Editor, then make the first advisor, either:
+- `npm run bootstrap -- you@example.org "Password" "Name" advisor` (creates a new account), or
+- in the SQL Editor: `update public.profiles set role = 'advisor' where email = 'you@example.org';` (promotes an existing account). Run it before any other advisors exist or after, the SQL Editor is always allowed.

@@ -19,10 +19,10 @@ async function api(method: string, body?: unknown, query = '') {
   return j;
 }
 
-const ROLE_LABEL: Record<string, string> = { high_command: 'High Command', chair: 'Chair', pending: 'No access' };
+const ROLE_LABEL: Record<string, string> = { advisor: 'Advisor', high_command: 'High Command', chair: 'Chair', pending: 'No access' };
 
 export function Users() {
-  const { profile: me } = useAuth();
+  const { profile: me, isAdvisor } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
   const [form, setForm] = useState({ email: '', password: '', full_name: '', role: 'chair' });
   const [busy, setBusy] = useState(false);
@@ -89,6 +89,7 @@ export function Users() {
           <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
             <option value="chair">Committee Chair</option>
             <option value="high_command">High Command (Secretariat)</option>
+            {isAdvisor && <option value="advisor">Advisor</option>}
           </select>
         </Field>
         <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
@@ -103,13 +104,14 @@ export function Users() {
                 <div className="truncate font-semibold">{u.full_name || '(no name)'}{u.id === me?.id && <span className="ml-2 text-xs text-slate-400">you</span>}</div>
                 <div className="truncate text-xs text-slate-500">{u.email}</div>
               </div>
-              <select className="input w-auto" value={u.role} disabled={u.id === me?.id} onChange={(e) => setRole(u, e.target.value)}>
+              <select className="input w-auto" value={u.role} disabled={u.id === me?.id || (u.role === 'advisor' && !isAdvisor)} onChange={(e) => setRole(u, e.target.value)}>
                 {u.role === 'pending' && <option value="pending">{ROLE_LABEL.pending}</option>}
                 <option value="chair">{ROLE_LABEL.chair}</option>
                 <option value="high_command">{ROLE_LABEL.high_command}</option>
+                {(isAdvisor || u.role === 'advisor') && <option value="advisor">{ROLE_LABEL.advisor}</option>}
               </select>
-              <button className="btn btn-secondary btn-sm" onClick={() => resetPw(u)}>Reset password</button>
-              <button className="btn btn-ghost btn-sm text-red-600" disabled={u.id === me?.id} onClick={() => remove(u)}>Delete</button>
+              <button className="btn btn-secondary btn-sm" disabled={u.role === 'advisor' && !isAdvisor} onClick={() => resetPw(u)}>Reset password</button>
+              <button className="btn btn-ghost btn-sm text-red-600" disabled={u.id === me?.id || (u.role === 'advisor' && !isAdvisor)} onClick={() => remove(u)}>Delete</button>
             </div>
           ))}
         </div>

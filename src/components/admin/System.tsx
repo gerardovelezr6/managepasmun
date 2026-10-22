@@ -4,11 +4,13 @@ import { supabase } from '@/lib/supabase';
 import { toast, toastError } from '@/lib/toast';
 import { ArchiveRecord } from '@/lib/types';
 import { useLiveReload } from '@/lib/hooks';
+import { useAuth } from '../AuthProvider';
 import { Empty, Field } from '../ui';
 
 const CONFIRM_WORD = 'RESET';
 
 export function System() {
+  const { isAdvisor } = useAuth();
   const [archives, setArchives] = useState<ArchiveRecord[]>([]);
   const [label, setLabel] = useState('');
   const [wipe, setWipe] = useState(false);
@@ -75,6 +77,7 @@ export function System() {
           <button className="btn btn-secondary" onClick={archiveOnly} disabled={busy}>Save archive only (no deletion)</button>
         </div>
 
+        {isAdvisor ? (
         <div className="card space-y-3 border-red-200">
           <h3 className="font-bold text-red-700">Full administrative reset</h3>
           <label className="flex items-start gap-2 text-sm">
@@ -87,6 +90,12 @@ export function System() {
           </button>
           <p className="text-xs text-slate-400">The archive is written first in the same database transaction. If it fails, nothing is deleted.</p>
         </div>
+        ) : (
+          <div className="card space-y-1 border-red-200">
+            <h3 className="font-bold text-red-700">Full administrative reset</h3>
+            <p className="text-sm text-slate-600">Only an advisor can run the full reset. Ask an advisor if the system needs to be cleared. You can still save an archive above.</p>
+          </div>
+        )}
       </div>
 
       <div className="card">
