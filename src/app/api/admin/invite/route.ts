@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { User } from '@supabase/supabase-js';
-import { adminClient, requireHighCommand, siteUrl } from '@/lib/serverAdmin';
+import { adminClient, advisorGuard, requireHighCommand, siteUrl } from '@/lib/serverAdmin';
 
 // Onboarding without email: High Command creates an account and gets a one-time link to hand over.
 // The person opens the link, chooses their own password on /set-password and is signed in.
 // Passwords are hashed by Supabase and can't be read back by anyone.
 
-const ROLES = ['high_command', 'chair'];
+const ROLES = ['advisor', 'high_command', 'chair'];
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
 // A link for this address: an invite link until the person has joined, a recovery link afterwards.
@@ -41,13 +41,21 @@ export async function GET(req: NextRequest) {
 // Create an account and return its set-password link. Nothing is emailed.
 export async function POST(req: NextRequest) {
   try {
-    if (!(await requireHighCommand(req))) return fail('High Command only', 403);
+    const caller = await requireHighCommand(req);
+    if (!caller) return fail('High Command only', 403);
     const { email, full_name = '', role } = await req.json();
     const addr = String(email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) return fail('Enter a valid email address');
     if (!ROLES.includes(role)) return fail('Invalid role');
+    const blocked = await advisorGuard(caller, { newRole: role });
+    if (blocked) return fail(blocked, 403);
 
     const sb = adminClient();
+    const { data: existing } = await sb.from('profiles').select('id').eq('email', addr).maybeSingle();
+    if (existing) {
+      const g = await advisorGuard(caller, { targetId: existing.id });
+      if (g) return fail(g, 403);
+    }
     const { link, id } = await makeLink(req, addr, true, { full_name, invited_at: new Date().toISOString() });
     if (!id) return fail('Could not create user', 500);
     const { error: pErr } = await sb.from('profiles').upsert({ id, email: addr, full_name, role });
@@ -63,9 +71,12 @@ export async function POST(req: NextRequest) {
 // A fresh link for an existing account.
 export async function PATCH(req: NextRequest) {
   try {
-    if (!(await requireHighCommand(req))) return fail('High Command only', 403);
+    const caller = await requireHighCommand(req);
+    if (!caller) return fail('High Command only', 403);
     const { id } = await req.json();
     if (!id) return fail('Missing id');
+    const blocked = await advisorGuard(caller, { targetId: id });
+    if (blocked) return fail(blocked, 403);
     const { data: u, error } = await adminClient().auth.admin.getUserById(id);
     if (error || !u.user?.email) return fail(error?.message || 'User not found', 404);
     const { link } = await makeLink(req, u.user.email, !u.user.email_confirmed_at);

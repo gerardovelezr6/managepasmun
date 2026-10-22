@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast, toastError } from '@/lib/toast';
 import { Profile } from '@/lib/types';
+import { useAuth } from '../AuthProvider';
 import { Empty, Field } from '../ui';
 
 interface AuthStatus {
@@ -37,10 +38,11 @@ function statusOf(s?: AuthStatus): { text: string; tone: string } {
 }
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—');
-const ROLE_LABEL: Record<string, string> = { high_command: 'High Command', chair: 'Chair', pending: 'No access' };
+const ROLE_LABEL: Record<string, string> = { advisor: 'Advisor', high_command: 'High Command', chair: 'Chair', pending: 'No access' };
 
 // Invite people by email: they choose their own password through the emailed link.
 export function Onboarding() {
+  const { isAdvisor } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
   const [status, setStatus] = useState<Record<string, AuthStatus>>({});
   const [form, setForm] = useState({ email: '', full_name: '', role: 'chair' });
@@ -109,6 +111,7 @@ export function Onboarding() {
             <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               <option value="chair">Committee Chair</option>
               <option value="high_command">High Command (Secretariat)</option>
+              {isAdvisor && <option value="advisor">Advisor</option>}
             </select>
           </Field>
           <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Creating…' : 'Create link'}</button>
@@ -142,7 +145,7 @@ export function Onboarding() {
                     <div className="text-xs text-slate-400">Last sign-in: {when(s?.last_sign_in_at ?? null)}</div>
                   </div>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${st.tone}`}>{st.text}</span>
-                  <button className="btn btn-secondary btn-sm" disabled={working === u.id} onClick={() => copyLink(u)}>Copy link</button>
+                  <button className="btn btn-secondary btn-sm" disabled={working === u.id || (u.role === 'advisor' && !isAdvisor)} onClick={() => copyLink(u)}>Copy link</button>
                 </div>
               );
             })}

@@ -1,13 +1,17 @@
-// Creates the FIRST High Command account.
-// Usage: npm run bootstrap -- you@example.com "StrongPassword!" "Secretary-General Placeholder"
+// Creates an account with a privileged role (default: High Command). Use "advisor" for the first advisor.
+// Usage: npm run bootstrap -- you@example.com "StrongPassword!" "Secretary-General Placeholder" [high_command|advisor]
 import { createClient } from '@supabase/supabase-js';
 
-const [email, password, fullName = 'High Command'] = process.argv.slice(2);
+const [email, password, fullName = 'High Command', role = 'high_command'] = process.argv.slice(2);
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!email || !password) {
-  console.error('Usage: npm run bootstrap -- <email> <password> [full name]');
+  console.error('Usage: npm run bootstrap -- <email> <password> [full name] [high_command|advisor]');
+  process.exit(1);
+}
+if (!['high_command', 'advisor'].includes(role)) {
+  console.error('Role must be high_command or advisor');
   process.exit(1);
 }
 if (!url || !key) {
@@ -32,9 +36,9 @@ if (error) {
 await new Promise((r) => setTimeout(r, 500));
 const { error: upErr } = await sb
   .from('profiles')
-  .upsert({ id: data.user.id, email, full_name: fullName, role: 'high_command' });
+  .upsert({ id: data.user.id, email, full_name: fullName, role });
 if (upErr) {
   console.error('User created but role promotion failed:', upErr.message);
   process.exit(1);
 }
-console.log(`High Command account ready: ${email}`);
+console.log(`${role === 'advisor' ? 'Advisor' : 'High Command'} account ready: ${email}`);

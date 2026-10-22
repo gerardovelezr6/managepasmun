@@ -10,6 +10,7 @@ interface AuthCtx {
   chairOf: string[];
   loading: boolean;
   isHC: boolean;
+  isAdvisor: boolean;
   canRun: (committeeId: string) => boolean;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -21,6 +22,7 @@ const Ctx = createContext<AuthCtx>({
   chairOf: [],
   loading: true,
   isHC: false,
+  isAdvisor: false,
   canRun: () => false,
   signOut: async () => {},
   refresh: async () => {},
@@ -65,13 +67,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfile]);
 
   const value = useMemo<AuthCtx>(() => {
-    const isHC = profile?.role === 'high_command';
+    const isAdvisor = profile?.role === 'advisor';
+    const isHC = isAdvisor || profile?.role === 'high_command';
     return {
       session,
       profile,
       chairOf,
       loading,
       isHC,
+      isAdvisor,
       canRun: (id) => isHC || (profile?.role === 'chair' && chairOf.includes(id)),
       signOut: async () => {
         await supabase().auth.signOut();

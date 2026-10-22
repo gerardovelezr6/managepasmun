@@ -21,7 +21,7 @@ export function Committees() {
     const sb = supabase();
     const [c, p, l, d] = await Promise.all([
       sb.from('committees').select('*').order('name'),
-      sb.from('profiles').select('*').in('role', ['chair', 'high_command']).order('full_name'),
+      sb.from('profiles').select('*').in('role', ['chair', 'high_command', 'advisor']).order('full_name'),
       sb.from('committee_chairs').select('*'),
       sb.from('delegates').select('committee_id'),
     ]);
@@ -115,7 +115,7 @@ export function Committees() {
                           return (
                             <label key={s.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${on ? 'border-brand bg-brand/5 font-medium' : 'border-slate-200'}`}>
                               <input type="checkbox" checked={on} onChange={(e) => toggleChair(c.id, s.id, e.target.checked)} />
-                              {s.full_name || s.email} <span className="text-xs text-slate-400">{s.role === 'high_command' ? 'HC' : 'Chair'}</span>
+                              {s.full_name || s.email} <span className="text-xs text-slate-400">{s.role === 'advisor' ? 'Advisor' : s.role === 'high_command' ? 'HC' : 'Chair'}</span>
                             </label>
                           );
                         })}

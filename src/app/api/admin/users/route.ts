@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminClient, requireHighCommand } from '@/lib/serverAdmin';
+import { adminClient, advisorGuard, requireHighCommand } from '@/lib/serverAdmin';
 
 // Account management needs the service-role key, which only ever lives on the server.
 // Every call verifies the caller's Supabase session and requires role = high_command.
 
-const ROLES = ['high_command', 'chair'];
+const ROLES = ['advisor', 'high_command', 'chair'];
 
 const admin = adminClient;
 
@@ -17,6 +17,8 @@ export async function POST(req: NextRequest) {
     const { email, password, full_name = '', role } = await req.json();
     if (!email || !password || password.length < 8) return fail('Email and a password of at least 8 characters are required');
     if (!ROLES.includes(role)) return fail('Invalid role');
+    const blocked = await advisorGuard(caller, { newRole: role });
+    if (blocked) return fail(blocked, 403);
 
     const sb = admin();
     const { data, error } = await sb.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } });
@@ -35,11 +37,13 @@ export async function PATCH(req: NextRequest) {
     if (!caller) return fail('High Command only', 403);
     const { id, role, full_name, password } = await req.json();
     if (!id) return fail('Missing id');
+    const blocked = await advisorGuard(caller, { targetId: id, newRole: role });
+    if (blocked) return fail(blocked, 403);
     const sb = admin();
 
     if (role !== undefined) {
       if (!ROLES.includes(role)) return fail('Invalid role');
-      if (id === caller.id && role !== 'high_command') return fail('You cannot remove your own High Command role');
+      if (id === caller.id && role !== caller.role) return fail('You cannot change your own role');
     }
     if (password !== undefined) {
       if (String(password).length < 8) return fail('Password must be at least 8 characters');
@@ -67,6 +71,8 @@ export async function DELETE(req: NextRequest) {
     const id = new URL(req.url).searchParams.get('id');
     if (!id) return fail('Missing id');
     if (id === caller.id) return fail('You cannot delete your own account');
+    const blocked = await advisorGuard(caller, { targetId: id });
+    if (blocked) return fail(blocked, 403);
     const { error } = await admin().auth.admin.deleteUser(id);
     if (error) return fail(error.message);
     return NextResponse.json({ ok: true });
