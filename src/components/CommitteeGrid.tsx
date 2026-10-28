@@ -25,7 +25,7 @@ export function CommitteeGrid({ onlyMine = false }: { onlyMine?: boolean }) {
   const [q, setQ] = useState('');
 
   useLiveReload(['committees', 'committee_state'], async () => {
-    const { data } = await supabase().from('committees').select('*, committee_state(*)').order('name');
+    const { data } = await supabase().from('committees').select('*, committee_state(*)').order('sort_order').order('name');
     setRows(
       ((data || []) as any[]).map((c) => {
         const s = Array.isArray(c.committee_state) ? c.committee_state[0] : c.committee_state;

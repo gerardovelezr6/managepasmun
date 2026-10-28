@@ -28,6 +28,8 @@ export function CommitteeTypes() {
   const [dirty, setDirty] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dragCat, setDragCat] = useState<string | null>(null);
+  const [overCat, setOverCat] = useState<string | null>(null);
   const upload = useRef<{ type: string; group: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -66,6 +68,16 @@ export function CommitteeTypes() {
     setGroup(target.type, target.group, { logo: sb.storage.from('branding').getPublicUrl(path).data.publicUrl });
   }
 
+  // Drag a category onto another to put it in that place; committees follow this order everywhere.
+  function moveCategory(from: string, to: string) {
+    if (from === to) return;
+    edit((c) => {
+      const toI = c.categories.findIndex((x) => x.key === to); // the dragged one takes this position
+      const [item] = c.categories.splice(c.categories.findIndex((x) => x.key === from), 1);
+      c.categories.splice(toI, 0, item);
+    });
+  }
+
   function addCategory() {
     const name = window.prompt('Category name (e.g. Historical Committees):')?.trim();
     if (!name) return;
@@ -92,12 +104,25 @@ export function CommitteeTypes() {
 
       <section className="card space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold">Categories</h3>
+          <div><h3 className="font-bold">Categories</h3><p className="text-xs text-slate-500">Drag ⋮⋮ to set the order. Committees are listed in this order everywhere.</p></div>
           <button className="btn btn-secondary btn-sm" onClick={addCategory}>+ Category</button>
         </div>
         <div className="space-y-2">
           {cat.categories.map((c) => (
-            <div key={c.key} className="flex flex-wrap items-center gap-2">
+            <div
+              key={c.key}
+              onDragOver={(e) => { if (dragCat && dragCat !== c.key) { e.preventDefault(); setOverCat(c.key); } }}
+              onDrop={(e) => { e.preventDefault(); if (dragCat) moveCategory(dragCat, c.key); setDragCat(null); setOverCat(null); }}
+              className={`flex flex-wrap items-center gap-2 rounded-lg ${dragCat === c.key ? 'opacity-40' : ''} ${overCat === c.key ? 'ring-2 ring-brand' : ''}`}
+            >
+              <span
+                draggable
+                title="Drag to reorder"
+                onDragStart={(e) => { setDragCat(c.key); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.key); const row = (e.currentTarget as HTMLElement).parentElement; if (row) e.dataTransfer.setDragImage(row, 16, 16); }}
+                onDragEnd={() => { setDragCat(null); setOverCat(null); }}
+                className="cursor-grab select-none px-1 text-lg leading-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+                aria-label="Drag handle"
+              >⋮⋮</span>
               <input type="color" className="h-9 w-10 rounded border border-slate-200" value={c.color} onChange={(e) => setCategory(c.key, { color: e.target.value })} aria-label="Colour" />
               <input className="input max-w-xs flex-1" value={c.name} onChange={(e) => setCategory(c.key, { name: e.target.value })} aria-label="Name" />
               <input className="input max-w-xs flex-1" value={c.name_es || ''} placeholder="Nombre en español" onChange={(e) => setCategory(c.key, { name_es: e.target.value })} aria-label="Nombre en español" />

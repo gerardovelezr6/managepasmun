@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { useTick } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
 import { toast, toastError } from '@/lib/toast';
 import { Profile } from '@/lib/types';
@@ -32,7 +33,13 @@ async function api(method: string, body?: unknown) {
 
 function statusOf(s?: AuthStatus): { text: string; tone: string } {
   if (!s) return { text: 'Unknown', tone: 'bg-slate-100 text-slate-600' };
-  if (s.password_set_at) return { text: 'Password set', tone: 'bg-emerald-100 text-emerald-800' };
+  if (s.password_set_at) {
+    // "Password set" is just the first confirmation; after an hour, or once they have signed in again, they are simply active.
+    const set = new Date(s.password_set_at).getTime();
+    const signedInSince = s.last_sign_in_at && new Date(s.last_sign_in_at).getTime() > set + 60_000;
+    if (!signedInSince && Date.now() - set < 3_600_000) return { text: 'Password set', tone: 'bg-sky-100 text-sky-800' };
+    return { text: 'Active', tone: 'bg-emerald-100 text-emerald-800' };
+  }
   if (s.invited_at) return { text: 'Waiting for password', tone: 'bg-amber-100 text-amber-800' };
   if (s.last_sign_in_at) return { text: 'Active', tone: 'bg-emerald-100 text-emerald-800' };
   return { text: 'Never signed in', tone: 'bg-slate-100 text-slate-600' };
@@ -43,6 +50,7 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : 'â€
 // Invite people by email: they choose their own password through the emailed link.
 export function Onboarding() {
   const { isAdvisor } = useAuth();
+  useTick(60_000);
   const [users, setUsers] = useState<Profile[]>([]);
   const [status, setStatus] = useState<Record<string, AuthStatus>>({});
   const [form, setForm] = useState({ email: '', full_name: '', role: 'chair' });
