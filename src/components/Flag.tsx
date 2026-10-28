@@ -25,14 +25,19 @@ export function Flag({ country, flag, group, className = '' }: { country: string
 }
 
 // Party / side badge (colour chip with the short name, or the uploaded logo). Nothing for types without groups.
-export function GroupBadge({ groupKey, type: typeProp, className = '', full = false }: { groupKey?: string | null; type?: CommitteeType; className?: string; full?: boolean }) {
+export function GroupBadge({ groupKey, type: typeProp, className = '', full = false, solid = false }: { groupKey?: string | null; type?: CommitteeType; className?: string; full?: boolean; solid?: boolean }) {
   const ctxType = useCommitteeType();
   const lang = useLang();
   const type = typeProp || ctxType;
   const g = groupOf(type, groupKey);
   if (!g) return null;
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white ${className}`} style={{ background: g.color }} title={nameIn(g, lang)}>
+    <span
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide ${solid ? 'text-white' : ''} ${className}`}
+      // Soft tinted pill in the group's colour on light screens; solid on the dark projection screen.
+      style={solid ? { background: g.color } : { background: `color-mix(in srgb, ${g.color} 12%, white)`, color: g.color, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${g.color} 28%, white)` }}
+      title={nameIn(g, lang)}
+    >
       {g.logo && type.flag !== 'group_logo' && <img src={g.logo} alt="" className="h-[1.6em] w-auto max-w-[3.5em] rounded-[3px] bg-white object-contain p-[1px]" />}
       {full ? nameIn(g, lang) : g.short}
     </span>
