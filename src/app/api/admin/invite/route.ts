@@ -15,8 +15,12 @@ async function makeLink(req: NextRequest, email: string, pending: boolean, data?
   const { data: link, error } = await adminClient().auth.admin.generateLink(
     pending ? { type: 'invite', email, options } : { type: 'recovery', email, options: { redirectTo: options.redirectTo } }
   );
-  if (error || !link.properties?.action_link) throw new Error(error?.message || 'Could not create link');
-  return { link: link.properties.action_link, id: link.user?.id as string | undefined };
+  const hashed = link.properties?.hashed_token;
+  if (error || !hashed) throw new Error(error?.message || 'Could not create link');
+  // Our own page, not Supabase's one-click URL: chat apps and mail scanners open links to make previews,
+  // which used up the one-time token before the person did. Here the token is only used when they press a button.
+  const type = pending ? 'invite' : 'recovery';
+  return { link: `${siteUrl(req)}/set-password?token_hash=${encodeURIComponent(hashed)}&type=${type}`, id: link.user?.id as string | undefined };
 }
 
 // Status of every account, from Supabase Auth.

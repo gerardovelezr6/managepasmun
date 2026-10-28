@@ -10,7 +10,8 @@ import { BrandMark, useSettings } from '@/components/BrandProvider';
 export default function SetPasswordPage() {
   const router = useRouter();
   const { settings } = useSettings();
-  const [state, setState] = useState<'checking' | 'ready' | 'invalid'>('checking');
+  const [state, setState] = useState<'checking' | 'confirm' | 'ready' | 'invalid'>('checking');
+  const [tokenInfo, setTokenInfo] = useState<{ hash: string; type: 'invite' | 'recovery' } | null>(null);
   const [problem, setProblem] = useState('');
   // Set only for a brand-new invitation (never for a forgotten-password link): the person's name for the greeting.
   const [welcome, setWelcome] = useState<string | null>(null);
@@ -26,6 +27,14 @@ export default function SetPasswordPage() {
     if (expired) {
       setProblem(expired.replace(/\+/g, ' '));
       setState('invalid');
+      return;
+    }
+    // New-style link: the token is only spent when the person presses the button below.
+    const q = new URLSearchParams(window.location.search);
+    const th = q.get('token_hash');
+    if (th) {
+      setTokenInfo({ hash: th, type: q.get('type') === 'recovery' ? 'recovery' : 'invite' });
+      setState('confirm');
       return;
     }
     const ready = (s: Session) => {
@@ -47,6 +56,22 @@ export default function SetPasswordPage() {
       clearTimeout(t);
     };
   }, []);
+
+  async function confirmLink() {
+    if (!tokenInfo) return;
+    setBusy(true);
+    const { data, error } = await supabase().auth.verifyOtp({ token_hash: tokenInfo.hash, type: tokenInfo.type });
+    setBusy(false);
+    if (error || !data.session) {
+      setProblem(error?.message || '');
+      setState('invalid');
+      return;
+    }
+    const meta = data.session.user.user_metadata || {};
+    if (meta.invited_at && !meta.password_set_at) setWelcome(String(meta.full_name || '').trim() || '');
+    window.history.replaceState(null, '', '/set-password');
+    setState('ready');
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +100,13 @@ export default function SetPasswordPage() {
         </div>
 
         {state === 'checking' && <p className="text-center text-sm text-slate-500">Checking your link…</p>}
+
+        {state === 'confirm' && (
+          <div className="space-y-3 text-center text-sm">
+            <p className="text-slate-600">Press the button to continue and choose your password.</p>
+            <button className="btn btn-primary w-full" disabled={busy} onClick={confirmLink}>{busy ? 'Checking…' : 'Continue'}</button>
+          </div>
+        )}
 
         {state === 'invalid' && (
           <div className="space-y-3 text-sm">
