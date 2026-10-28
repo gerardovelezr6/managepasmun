@@ -62,12 +62,12 @@ export const DEFAULT_CATALOG: Catalog = {
       key: 'mx_senate', name: 'Senado de México', name_es: 'Senado de México', default_category: 'specialized',
       label_field: 'Entidad', label_field_es: 'Entidad', flag: 'group_logo', group_label: 'Partido', group_label_es: 'Partido', group_required: true, bulk: ['country', 'group', 'name'],
       groups: [
-        { key: 'morena', name: 'MORENA', short: 'MORENA', color: '#8c1d2f' },
-        { key: 'pvem', name: 'PVEM', short: 'PVEM', color: '#16a34a' },
-        { key: 'pan', name: 'PAN', short: 'PAN', color: '#1d4ed8' },
-        { key: 'pt', name: 'PT', short: 'PT', color: '#e11d48' },
-        { key: 'mc', name: 'MC', short: 'MC', color: '#ea580c' },
-        { key: 'pri', name: 'PRI', short: 'PRI', color: '#15803d' },
+        { key: 'morena', name: 'MORENA', short: 'MORENA', color: '#8c1d2f', logo: '/logos/mx/morena.png' },
+        { key: 'pvem', name: 'PVEM', short: 'PVEM', color: '#16a34a', logo: '/logos/mx/pvem.png' },
+        { key: 'pan', name: 'PAN', short: 'PAN', color: '#1d4ed8', logo: '/logos/mx/pan.png' },
+        { key: 'pt', name: 'PT', short: 'PT', color: '#e11d48', logo: '/logos/mx/pt.png' },
+        { key: 'mc', name: 'MC', short: 'MC', color: '#ea580c', logo: '/logos/mx/mc.png' },
+        { key: 'pri', name: 'PRI', short: 'PRI', color: '#15803d', logo: '/logos/mx/pri.png' },
       ],
     },
     {

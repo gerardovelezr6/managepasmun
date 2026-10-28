@@ -13,7 +13,8 @@ export function Flag({ country, flag, group, className = '' }: { country: string
   if (type.flag === 'group_logo') {
     const logo = groupOf(type, group)?.logo;
     if (!logo) return null;
-    return <span aria-hidden className={`inline-block aspect-[4/3] h-[1em] shrink-0 overflow-hidden rounded-[2px] bg-white ring-1 ring-black/10 ${className}`}><img src={logo} alt="" className="h-full w-full object-contain" /></span>;
+    // Logos are (nearly) square, so they sit in the flag's place at the same height, without a frame.
+    return <img aria-hidden src={logo} alt="" className={`inline-block h-[1.15em] w-auto max-w-[1.8em] shrink-0 rounded-[3px] object-contain ${className}`} />;
   }
   const code = resolveFlag(type.flag, country, flag);
   if (!code) return null;

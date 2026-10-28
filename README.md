@@ -118,3 +118,5 @@ Run `supabase/migrations/009_party_logo_slot.sql` too: the Senado de México now
 ## Flag sources
 
 Country flags come from the `flag-icons` package. US state and territory flags in `public/flags/us/` come from the `region-flags` collection (public-domain Wikimedia files, optimised with svgo).
+
+Run `supabase/migrations/010_mx_party_logos.sql` as well: it fills in the six party logos bundled in `public/logos/mx`.
