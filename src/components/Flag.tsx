@@ -25,8 +25,8 @@ export function GroupBadge({ groupKey, type: typeProp, className = '', full = fa
   const g = groupOf(type, groupKey);
   if (!g) return null;
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white ${className}`} style={{ background: g.color }} title={nameIn(g, lang)}>
-      {g.logo && <img src={g.logo} alt="" className="h-3 w-3 rounded-full bg-white object-contain" />}
+    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white ${className}`} style={{ background: g.color }} title={nameIn(g, lang)}>
+      {g.logo && <img src={g.logo} alt="" className="h-[1.6em] w-auto max-w-[3.5em] rounded-[3px] bg-white object-contain p-[1px]" />}
       {full ? nameIn(g, lang) : g.short}
     </span>
   );

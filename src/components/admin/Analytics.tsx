@@ -42,7 +42,7 @@ export function Analytics() {
 
   useLiveReload(['committees', 'committee_state', 'delegates', 'speakers_list', 'events', 'votes', 'sessions'], async () => {
     const [{ data }, { data: ss }] = await Promise.all([
-      supabase().from('committee_analytics').select('*').order('name'),
+      supabase().from('committee_analytics').select('*').order('sort_order').order('name'),
       supabase().from('sessions').select('*'),
     ]);
     setSessions((ss || []) as SessionRow[]);

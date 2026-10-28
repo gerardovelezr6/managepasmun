@@ -277,12 +277,34 @@ export function usStateFlag(text: string | null | undefined): string | null {
 }
 export const US_STATE_NAMES = US_STATES.map(([code, name]) => ({ code: `us-${code}`, name }));
 
+// "Dick Durbin (Illinois)" → 'us-il'. Looks inside the parentheses first, then for a state name anywhere in the text.
+export function usStateIn(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const paren = text.match(/\(([^)]+)\)/);
+  if (paren) {
+    const hit = usStateFlag(paren[1]);
+    if (hit) return hit;
+  }
+  const direct = usStateFlag(text);
+  if (direct) return direct;
+  const words = norm(text).split(' ').filter(Boolean);
+  for (let len = Math.min(3, words.length); len >= 1; len--) {
+    for (let i = 0; i + len <= words.length; i++) {
+      const gram = words.slice(i, i + len).join(' ');
+      if (len === 1 && gram.length < 4) continue; // not "in", "or", "me", "la"...
+      const hit = usStateFlag(gram);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
 // One entry point for every committee type: which flag code (ISO code, or 'us-xx' for a state) goes with this text.
 export function resolveFlag(source: 'country' | 'country_in_text' | 'us_state' | 'none', text: string | null | undefined, override?: string | null): string | null {
   if (override === 'none') return null;
   if (override) return override.toLowerCase();
   if (source === 'none') return null;
-  if (source === 'us_state') return usStateFlag(text);
+  if (source === 'us_state') return usStateIn(text);
   if (source === 'country_in_text') return findCountryIn(text);
   return guessFlag(text);
 }
