@@ -1,7 +1,7 @@
 // Committee categories and committee types. Everything here is data: High Command edits it in
 // "Types & categories" (stored in settings.committee_catalog), so new kinds of committee, parties,
 // sides, colours and logos can be added later without touching code.
-export type FlagSource = 'country' | 'country_in_text' | 'us_state' | 'none';
+export type FlagSource = 'country' | 'country_in_text' | 'us_state' | 'group_logo' | 'none';
 export type BulkColumn = 'country' | 'name' | 'group';
 
 export interface Group {
@@ -60,7 +60,7 @@ export const DEFAULT_CATALOG: Catalog = {
     },
     {
       key: 'mx_senate', name: 'Senado de México', name_es: 'Senado de México', default_category: 'specialized',
-      label_field: 'Entidad', label_field_es: 'Entidad', flag: 'none', group_label: 'Partido', group_label_es: 'Partido', group_required: true, bulk: ['country', 'group', 'name'],
+      label_field: 'Entidad', label_field_es: 'Entidad', flag: 'group_logo', group_label: 'Partido', group_label_es: 'Partido', group_required: true, bulk: ['country', 'group', 'name'],
       groups: [
         { key: 'morena', name: 'MORENA', short: 'MORENA', color: '#8c1d2f' },
         { key: 'pvem', name: 'PVEM', short: 'PVEM', color: '#16a34a' },

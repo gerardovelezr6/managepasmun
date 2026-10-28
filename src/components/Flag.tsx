@@ -7,8 +7,14 @@ import { nameIn } from '@/lib/catalog';
 
 // Small flag shown before a delegation's name. What counts as "the flag" depends on the committee type
 // (country flag, US state flag, none...). Renders nothing when nothing is recognised.
-export function Flag({ country, flag, className = '' }: { country: string; flag?: string | null; className?: string }) {
+export function Flag({ country, flag, group, className = '' }: { country: string; flag?: string | null; group?: string | null; className?: string }) {
   const type = useCommitteeType();
+  // Types such as the Senado de México show the party logo where other committees show a flag.
+  if (type.flag === 'group_logo') {
+    const logo = groupOf(type, group)?.logo;
+    if (!logo) return null;
+    return <span aria-hidden className={`inline-block aspect-[4/3] h-[1em] shrink-0 overflow-hidden rounded-[2px] bg-white ring-1 ring-black/10 ${className}`}><img src={logo} alt="" className="h-full w-full object-contain" /></span>;
+  }
   const code = resolveFlag(type.flag, country, flag);
   if (!code) return null;
   if (code.startsWith('us-')) {
@@ -26,7 +32,7 @@ export function GroupBadge({ groupKey, type: typeProp, className = '', full = fa
   if (!g) return null;
   return (
     <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white ${className}`} style={{ background: g.color }} title={nameIn(g, lang)}>
-      {g.logo && <img src={g.logo} alt="" className="h-[1.6em] w-auto max-w-[3.5em] rounded-[3px] bg-white object-contain p-[1px]" />}
+      {g.logo && type.flag !== 'group_logo' && <img src={g.logo} alt="" className="h-[1.6em] w-auto max-w-[3.5em] rounded-[3px] bg-white object-contain p-[1px]" />}
       {full ? nameIn(g, lang) : g.short}
     </span>
   );

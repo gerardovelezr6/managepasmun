@@ -99,7 +99,7 @@ export function Caucus({ committeeId, state, update }: { committeeId: string; st
               <button className="btn btn-primary" onClick={recognize} disabled={!pick}>{t('Start')}</button>
             </div>
             <div className="mt-3 text-sm">
-              {t('Now speaking')}: <b className="inline-flex items-center gap-1.5">{speaker && <Flag country={speaker.country} flag={speaker.flag} />}{speaker ? speaker.country : '—'}</b>
+              {t('Now speaking')}: <b className="inline-flex items-center gap-1.5">{speaker && <Flag country={speaker.country} flag={speaker.flag} group={speaker.group_key} />}{speaker ? speaker.country : '—'}</b>
               {speaker && <button className="btn btn-ghost btn-sm ml-2" onClick={() => endSpeech(committeeId, state, update)}>{t('End speech')}</button>}
             </div>
           </div>
