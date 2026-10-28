@@ -215,7 +215,7 @@ export function Committees() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {[{ key: 'all', name: 'All' }, ...catalog.categories, { key: 'none', name: 'Uncategorized' }].map((c) => (
-                <button key={c.key} onClick={() => setCatFilter(c.key)} className={`rounded-full px-3 py-1 text-xs font-semibold ${catFilter === c.key ? 'bg-brand text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'}`}>{c.name}</button>
+                <button key={c.key} onClick={() => setCatFilter(c.key)} className={`px-3 py-1 text-xs font-semibold ${catFilter === c.key ? 'bg-brand text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'}`}>{c.name}</button>
               ))}
             </div>
             {anySecret && (

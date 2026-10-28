@@ -33,7 +33,7 @@ export function GroupBadge({ groupKey, type: typeProp, className = '', full = fa
   if (!g) return null;
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide ${solid ? 'text-white' : ''} ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase leading-none tracking-wider ${solid ? 'text-white' : ''} ${className}`}
       // Soft tinted pill in the group's colour on light screens; solid on the dark projection screen.
       style={solid ? { background: g.color } : { background: `color-mix(in srgb, ${g.color} 12%, white)`, color: g.color, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${g.color} 28%, white)` }}
       title={nameIn(g, lang)}

@@ -19,7 +19,7 @@ function Panel() {
   return (
     <main className="mx-auto max-w-7xl space-y-4 px-4 py-6">
       <div>
-        <h1 className="text-2xl font-bold">High Command</h1>
+        <h1 className="page-title">High Command</h1>
         <p className="text-sm text-slate-500">Conference-wide administration</p>
       </div>
       <Tabs

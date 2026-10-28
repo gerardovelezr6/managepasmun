@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import '@fontsource-variable/montserrat';
 import 'flag-icons/css/flag-icons.min.css';
 import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';

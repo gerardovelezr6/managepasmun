@@ -11,7 +11,7 @@ export function AppHeader() {
   const router = useRouter();
   const t = useT();
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 shadow-[0_1px_12px_-6px_rgba(15,23,42,0.12)] backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b border-t-[3px] border-b-slate-200 border-t-brand bg-white">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-2.5">
         <Link href="/" className="flex min-w-0 items-center gap-3">
           <BrandMark size={34} />

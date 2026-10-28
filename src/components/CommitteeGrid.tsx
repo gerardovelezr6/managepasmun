@@ -58,7 +58,7 @@ export function CommitteeGrid({ onlyMine = false }: { onlyMine?: boolean }) {
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${filter === s ? 'bg-brand text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'}`}
+            className={`px-3 py-1 text-xs font-semibold transition ${filter === s ? 'bg-brand text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100'}`}
           >
             {s === 'all' ? 'All' : SESSION_STATUS_LABEL[s]}
           </button>
@@ -75,7 +75,7 @@ export function CommitteeGrid({ onlyMine = false }: { onlyMine?: boolean }) {
               <h3 className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500"><span className="h-2.5 w-2.5 rounded-full" style={{ background: g.cat?.color || '#94a3b8' }} />{g.cat?.name || 'Other committees'} <span className="font-medium normal-case text-slate-400">({g.items.length})</span></h3>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {g.items.map((c) => (
-            <div key={c.id} className="card flex flex-col transition hover:-translate-y-0.5 hover:shadow-lg" style={{ borderTop: `3px solid ${g.cat?.color || '#cbd5e1'}` }}>
+            <div key={c.id} className="card flex flex-col transition-colors hover:border-slate-400" style={{ borderTop: `3px solid ${g.cat?.color || '#cbd5e1'}` }}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-xs font-bold uppercase tracking-wider text-brand">{c.abbreviation}</div>
