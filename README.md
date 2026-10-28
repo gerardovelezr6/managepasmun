@@ -92,3 +92,11 @@ Advisors can do everything High Command can. Only advisors can run the **full ad
 Run `supabase/migrations/005_advisor_role.sql` in the SQL Editor, then make the first advisor, either:
 - `npm run bootstrap -- you@example.org "Password" "Name" advisor` (creates a new account), or
 - in the SQL Editor: `update public.profiles set role = 'advisor' where email = 'you@example.org';` (promotes an existing account). Run it before any other advisors exist or after, the SQL Editor is always allowed.
+
+## Calls of attention, Spanish committees and flags
+
+Run `supabase/migrations/006_calls_languages_flags.sql` in the SQL Editor. It is safe to re-run.
+
+- **Call of attention**: a second button next to Warning in the Participation tab. It is counted separately and has its own column in the exported spreadsheet.
+- **Spanish committees**: pick the language when creating a committee (or edit it later). Chair screens, the projection screen and the export are then in Mexican Spanish for that committee only. Missing translations fall back to English. Rubric wording in Spanish is edited in Grading rubric.
+- **Flags**: shown beside country names, chosen automatically from the name. Ambiguous names ("Congo", "Korea") get none until set by hand with the flag menu in Roll call, Manage delegate list.

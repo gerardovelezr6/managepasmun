@@ -7,6 +7,8 @@ import { toastError } from '@/lib/toast';
 import { VOTE_LABEL_PRESETS } from '@/lib/config';
 import { useSettings } from '../BrandProvider';
 import { CommitteeState, Delegate, VoteRecord, VoteRow } from '@/lib/types';
+import { useT } from '@/lib/i18n';
+import { Flag } from '../Flag';
 import { Empty, Field, Seg } from '../ui';
 
 type Choice = VoteRecord['choice'];
@@ -24,13 +26,14 @@ async function cycleExplanation(rec: VoteRecord) {
 }
 
 function ExplainButton({ rec }: { rec: VoteRecord }) {
+  const t = useT();
   const { settings } = useSettings();
   const pts = Number(settings.explanation_points ?? 1);
   const s = rec.explanation || 'none';
   const style =
     s === 'requested' ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300' : s === 'given' ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 ring-1 ring-slate-300 hover:bg-slate-50';
-  const base = 'Right of explanation';
-  const label = s === 'requested' ? 'Explanation requested · mark given' : s === 'given' ? `Explanation given ✓ (+${pts} pt) · undo` : base;
+  const base = t('Right of explanation');
+  const label = s === 'requested' ? t('Explanation requested · mark given') : s === 'given' ? t('Explanation given ✓ (+{pts} pt) · undo', { pts }) : base;
   return (
     <button onClick={() => cycleExplanation(rec)} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${style}`}>
       {label}
@@ -39,6 +42,7 @@ function ExplainButton({ rec }: { rec: VoteRecord }) {
 }
 
 export function Voting({ committeeId, update }: { committeeId: string; state: CommitteeState; update: (p: Partial<CommitteeState>) => Promise<boolean> }) {
+  const t = useT();
   const { rows: delegates } = useRows<Delegate>('delegates', committeeId, 'country');
   const { rows: votes } = useRows<VoteRow>('votes', committeeId, 'created_at', false);
   // vote_records has no created_at column, so order by id.
@@ -96,7 +100,7 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
   }
 
   async function cancel() {
-    if (!open || !window.confirm('Cancel this vote and discard recorded votes?')) return;
+    if (!open || !window.confirm(t('Cancel this vote and discard recorded votes?'))) return;
     const { error } = await supabase().from('votes').delete().eq('id', open.id);
     if (error) return toastError(error);
     await update({ mode: 'formal' });
@@ -108,31 +112,31 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-4">
           <div className="card space-y-3">
-            <h3 className="font-bold">Open a vote</h3>
-            <Field label="What is being voted on?">
-              <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="[Placeholder: e.g. Draft Resolution 1.1]" />
+            <h3 className="font-bold">{t('Open a vote')}</h3>
+            <Field label={t('What is being voted on?')}>
+              <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('[Placeholder: e.g. Draft Resolution 1.1]')} />
             </Field>
-            <Field label="Paper / round tag (optional)" hint="Shown on the vote, the history and the exported grading log.">
+            <Field label={t('Paper / round tag (optional)')} hint={t('Shown on the vote, the history and the exported grading log.')}>
               <div className="flex flex-wrap items-center gap-1.5">
-                <input className="input max-w-[11rem]" value={tag} onChange={(e) => setTag(e.target.value)} placeholder="e.g. WP A1" />
+                <input className="input max-w-[11rem]" value={tag} onChange={(e) => setTag(e.target.value)} placeholder={t('e.g. WP A1')} />
                 {VOTE_LABEL_PRESETS.map((p) => (
                   <button key={p} type="button" onClick={() => setTag(p)} className={`rounded-md px-2 py-1 text-xs font-medium ${tag === p ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{p}</button>
                 ))}
               </div>
             </Field>
-            <Field label="Type" hint={kind === 'procedural' ? 'Procedural: In favor / Against only. No abstentions, no explanations.' : 'Substantive: In favor / Against / Abstention. Only delegates who voted In favor or Against have the right of explanation; abstentions do not.'}>
-              <Seg<VoteRow['kind']> value={kind} onChange={setKind} options={[{ value: 'procedural', label: 'Procedural' }, { value: 'substantive', label: 'Substantive' }]} />
+            <Field label={t('Type')} hint={kind === 'procedural' ? t('Procedural: In favor / Against only. No abstentions, no explanations.') : t('Substantive: In favor / Against / Abstention. Only delegates who voted In favor or Against have the right of explanation; abstentions do not.')}>
+              <Seg<VoteRow['kind']> value={kind} onChange={setKind} options={[{ value: 'procedural', label: t('Procedural') }, { value: 'substantive', label: t('Substantive') }]} />
             </Field>
-            <Field label="Needed to pass">
-              <Seg<VoteRow['threshold']> value={threshold} onChange={setThreshold} options={[{ value: 'simple', label: 'Simple majority' }, { value: 'two_thirds', label: 'Two-thirds' }]} />
+            <Field label={t('Needed to pass')}>
+              <Seg<VoteRow['threshold']> value={threshold} onChange={setThreshold} options={[{ value: 'simple', label: t('Simple majority') }, { value: 'two_thirds', label: t('Two-thirds') }]} />
             </Field>
-            <button className="btn btn-primary w-full" disabled={!title.trim()} onClick={start}>Open voting procedure</button>
+            <button className="btn btn-primary w-full" disabled={!title.trim()} onClick={start}>{t('Open voting procedure')}</button>
           </div>
 
           {lastSubstantive && (
             <div className="card">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-bold">Right of explanation</h3>
+                <h3 className="font-bold">{t('Right of explanation')}</h3>
                 {substantiveClosed.length > 1 && (
                   <select className="input ml-auto w-auto py-1 text-xs" value={lastSubstantive.id} onChange={(e) => setExplainFor(e.target.value)}>
                     {substantiveClosed.map((v) => (
@@ -141,15 +145,15 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
                   </select>
                 )}
               </div>
-              <p className="mb-3 text-sm text-slate-500">{lastSubstantive.label ? `${lastSubstantive.label} · ` : ''}{lastSubstantive.title}. Only delegates who voted In favor or Against may explain their vote (abstentions may not). Click to cycle: requested → given → cleared. Each explanation given earns points in the participation total.</p>
-              {explainRecs.length === 0 ? <Empty>No votes were recorded.</Empty> : (
+              <p className="mb-3 text-sm text-slate-500">{lastSubstantive.label ? `${lastSubstantive.label} · ` : ''}{lastSubstantive.title}. {t('Only delegates who voted In favor or Against may explain their vote (abstentions may not). Click to cycle: requested → given → cleared. Each explanation given earns points in the participation total.')}</p>
+              {explainRecs.length === 0 ? <Empty>{t('No votes were recorded.')}</Empty> : (
                 <ul className="divide-y divide-slate-100">
                   {explainRecs.map((r) => {
                     const d = delegates.find((x) => x.id === r.delegate_id);
                     return (
                       <li key={r.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                        <span className="min-w-0 flex-1 truncate font-semibold">{d?.country || 'Unknown'}</span>
-                        <span className={`badge ${r.choice === 'for' ? 'bg-emerald-100 text-emerald-700' : r.choice === 'against' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}`}>{CHOICE_LABEL[r.choice]}</span>
+                        <span className="flex min-w-0 flex-1 items-center gap-2 truncate font-semibold">{d && <Flag country={d.country} flag={d.flag} />}{d?.country || t('Unknown')}</span>
+                        <span className={`badge ${r.choice === 'for' ? 'bg-emerald-100 text-emerald-700' : r.choice === 'against' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}`}>{t(CHOICE_LABEL[r.choice])}</span>
                         <ExplainButton rec={r} />
                       </li>
                     );
@@ -161,17 +165,17 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
         </div>
 
         <div className="card h-fit">
-          <h3 className="mb-3 font-bold">Vote history</h3>
-          {closed.length === 0 ? <Empty>No votes yet.</Empty> : (
+          <h3 className="mb-3 font-bold">{t('Vote history')}</h3>
+          {closed.length === 0 ? <Empty>{t('No votes yet.')}</Empty> : (
             <ul className="divide-y divide-slate-100">
               {closed.map((v) => (
                 <li key={v.id} className="py-2.5 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold">{v.label && <span className="mr-1.5 badge bg-brand/10 text-brand">{v.label}</span>}{v.title}</span>
-                    <span className={`badge ml-auto ${v.result === 'passed' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{v.result}</span>
+                    <span className={`badge ml-auto ${v.result === 'passed' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{t(v.result || '')}</span>
                   </div>
                   <div className="text-xs text-slate-500">
-                    {v.final_for} in favor · {v.final_against} against{v.kind === 'substantive' ? ` · ${v.final_abstain} abstention${v.final_abstain === 1 ? '' : 's'}` : ''} · {THRESHOLD_LABEL[v.threshold]} · {v.kind}
+                    {t('{n} in favor', { n: v.final_for ?? 0 })} · {t('{n} against', { n: v.final_against ?? 0 })}{v.kind === 'substantive' ? ` · ${t(v.final_abstain === 1 ? '{n} abstention' : '{n} abstentions', { n: v.final_abstain ?? 0 })}` : ''} · {t(THRESHOLD_LABEL[v.threshold])} · {t(v.kind)}
                   </div>
                 </li>
               ))}
@@ -189,40 +193,40 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
       <div className="card flex flex-wrap items-center gap-4">
         <div className="min-w-0 flex-1">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Voting now · <span className={substantive ? 'text-brand' : ''}>{open.kind}</span> · {THRESHOLD_LABEL[open.threshold]}
+            {t('Voting now')} · <span className={substantive ? 'text-brand' : ''}>{t(open.kind)}</span> · {t(THRESHOLD_LABEL[open.threshold])}
           </div>
           <div className="truncate text-xl font-bold">{open.label && <span className="mr-2 badge bg-brand/10 align-middle text-brand">{open.label}</span>}{open.title}</div>
-          <div className="text-xs text-slate-400">{substantive ? 'Abstentions are enabled for delegates marked Present (not Present & voting). Only In favor / Against votes carry the right of explanation.' : 'Procedural: In favor or Against only.'}</div>
+          <div className="text-xs text-slate-400">{substantive ? t('Abstentions are enabled for delegates marked Present (not Present & voting). Only In favor / Against votes carry the right of explanation.') : t('Procedural: In favor or Against only.')}</div>
         </div>
-        <Tally label="In favor" n={live.for} tone="text-emerald-600" />
-        <Tally label="Against" n={live.against} tone="text-red-600" />
-        {substantive && <Tally label="Abstention" n={live.abstain} tone="text-slate-500" />}
-        <div className="text-center text-xs text-slate-500">Remaining<div className="text-xl font-bold text-slate-800">{Math.max(0, missing)}</div></div>
+        <Tally label={t('In favor')} n={live.for} tone="text-emerald-600" />
+        <Tally label={t('Against')} n={live.against} tone="text-red-600" />
+        {substantive && <Tally label={t('Abstention')} n={live.abstain} tone="text-slate-500" />}
+        <div className="text-center text-xs text-slate-500">{t('Remaining')}<div className="text-xl font-bold text-slate-800">{Math.max(0, missing)}</div></div>
       </div>
 
       <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
-        {eligible.length === 0 && <div className="p-6 text-center text-sm text-slate-500">No delegates are marked present. Take roll call first.</div>}
+        {eligible.length === 0 && <div className="p-6 text-center text-sm text-slate-500">{t('No delegates are marked present. Take roll call first.')}</div>}
         {eligible.map((d) => {
           const rec = byDelegate.get(d.id);
           const mayAbstain = d.attendance === 'present'; // "present & voting" delegates cannot abstain
           return (
             <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
               <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{d.country}</div>
-                <div className="text-xs text-slate-400">{d.attendance === 'present_and_voting' ? 'Present & voting' : 'Present'}</div>
+                <div className="flex items-center gap-2 truncate font-semibold"><Flag country={d.country} flag={d.flag} />{d.country}</div>
+                <div className="text-xs text-slate-400">{d.attendance === 'present_and_voting' ? t('Present & voting') : t('Present')}</div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <ChoiceBtn active={rec?.choice === 'for'} tone="bg-emerald-600" onClick={() => cast(d, 'for')}>In favor</ChoiceBtn>
-                <ChoiceBtn active={rec?.choice === 'against'} tone="bg-red-600" onClick={() => cast(d, 'against')}>Against</ChoiceBtn>
+                <ChoiceBtn active={rec?.choice === 'for'} tone="bg-emerald-600" onClick={() => cast(d, 'for')}>{t('In favor')}</ChoiceBtn>
+                <ChoiceBtn active={rec?.choice === 'against'} tone="bg-red-600" onClick={() => cast(d, 'against')}>{t('Against')}</ChoiceBtn>
                 {substantive && (
                   <ChoiceBtn
                     active={rec?.choice === 'abstain'}
                     tone="bg-slate-600"
                     disabled={!mayAbstain}
-                    title={mayAbstain ? undefined : 'Present & voting delegates cannot abstain'}
+                    title={mayAbstain ? undefined : t('Present & voting delegates cannot abstain')}
                     onClick={() => cast(d, 'abstain')}
                   >
-                    Abstain
+                    {t('Abstain')}
                   </ChoiceBtn>
                 )}
                 {substantive && rec && rec.choice !== 'abstain' && <ExplainButton rec={rec} />}
@@ -233,8 +237,8 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn btn-primary" onClick={close}>Close vote &amp; record result ({projected})</button>
-        <button className="btn btn-secondary" onClick={cancel}>Cancel vote</button>
+        <button className="btn btn-primary" onClick={close}>{t('Close vote & record result')} ({t(projected)})</button>
+        <button className="btn btn-secondary" onClick={cancel}>{t('Cancel vote')}</button>
       </div>
     </div>
   );

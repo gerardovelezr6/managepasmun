@@ -98,6 +98,14 @@ export function RubricEditor() {
               <div className="flex items-end sm:col-span-1">
                 <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(l)}>Remove</button>
               </div>
+              <div className="grid gap-3 border-t border-slate-100 pt-3 sm:col-span-12 sm:grid-cols-2">
+                <Field label="Spanish wording (Spanish committees)">
+                  <input className="input" defaultValue={l.label_es || ''} placeholder={l.label} onBlur={(e) => e.target.value !== (l.label_es || '') && patch(l, { label_es: e.target.value || null })} />
+                </Field>
+                <Field label="Spanish description">
+                  <textarea className="input h-16" defaultValue={l.description_es || ''} placeholder={l.description} onBlur={(e) => e.target.value !== (l.description_es || '') && patch(l, { description_es: e.target.value || null })} />
+                </Field>
+              </div>
             </div>
           ))}
         </div>

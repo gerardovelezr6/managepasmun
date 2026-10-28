@@ -20,12 +20,12 @@ export async function recognizeSpeaker(committeeId: string, delegateId: string, 
 }
 
 // What a passed motion does to the live committee state.
-export function motionPatch(ev: EventRow): Partial<CommitteeState> | null {
+export function motionPatch(ev: EventRow, t: (s: string) => string = (s) => s): Partial<CommitteeState> | null {
   switch (ev.type) {
     case 'moderated_caucus':
       return {
         mode: 'moderated',
-        caucus_topic: ev.details || 'Moderated caucus',
+        caucus_topic: ev.details || t('Moderated caucus'),
         caucus_speaking_sec: ev.speaking_sec || 60,
         caucus_timer: emptyTimer((ev.duration_sec || 600) * 1000),
         speaker_timer: emptyTimer((ev.speaking_sec || 60) * 1000),
@@ -34,7 +34,7 @@ export function motionPatch(ev: EventRow): Partial<CommitteeState> | null {
     case 'unmoderated_caucus':
       return {
         mode: 'unmoderated',
-        caucus_topic: ev.details || 'Unmoderated caucus',
+        caucus_topic: ev.details || t('Unmoderated caucus'),
         caucus_timer: emptyTimer((ev.duration_sec || 600) * 1000),
         current_speaker_id: null,
       };
@@ -91,7 +91,8 @@ export async function applyMotionEffects(
   committeeId: string,
   state: CommitteeState,
   update: (patch: Partial<CommitteeState>) => Promise<boolean>,
-  refresh: () => void
+  refresh: () => void,
+  t: (s: string) => string = (s) => s
 ): Promise<string | null> {
   switch (ev.type) {
     case 'open_session':
@@ -123,7 +124,7 @@ export async function applyMotionEffects(
     case 'extraordinary_questions':
       return 'Motion passed: extraordinary session of questions.';
     default: {
-      const patch = motionPatch(ev);
+      const patch = motionPatch(ev, t);
       if (patch) {
         await update(patch);
         return ev.type.includes('caucus') ? 'Motion passed. Caucus is ready on the Caucus tab.' : 'Motion passed and applied.';

@@ -6,6 +6,7 @@ import { APP_CONFIG, DOC_KINDS, labelFor } from '@/lib/config';
 import { toast, toastError } from '@/lib/toast';
 import { DocRow } from '@/lib/types';
 import { useAuth } from './AuthProvider';
+import { LOCALE, useLang, useT } from '@/lib/i18n';
 import { Empty, Field } from './ui';
 
 interface Cmt { id: string; name: string; abbreviation: string }
@@ -17,10 +18,12 @@ interface Cmt { id: string; name: string; abbreviation: string }
 //    Uploads made there are global, so every chair sees them.
 export function Documents({ committeeId }: { committeeId: string | null }) {
   const { session, isHC } = useAuth();
+  const t = useT();
+  const lang = useLang();
   const [docs, setDocs] = useState<DocRow[]>([]);
   const [committees, setCommittees] = useState<Cmt[]>([]);
   const [title, setTitle] = useState('');
-  const [kind, setKind] = useState<string>(DOC_KINDS[0].label);
+  const [kind, setKind] = useState<string>(t(DOC_KINDS[0].label));
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,7 +41,7 @@ export function Documents({ committeeId }: { committeeId: string | null }) {
 
   async function upload() {
     if (!file || !title.trim()) return;
-    if (file.size > APP_CONFIG.maxUploadMb * 1024 * 1024) return toastError(`File is larger than ${APP_CONFIG.maxUploadMb} MB`);
+    if (file.size > APP_CONFIG.maxUploadMb * 1024 * 1024) return toastError(t('File is larger than {n} MB', { n: APP_CONFIG.maxUploadMb }));
     setBusy(true);
     const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const path = `${committeeId || 'global'}/${Date.now()}-${safe}`;
@@ -56,17 +59,17 @@ export function Documents({ committeeId }: { committeeId: string | null }) {
     }
     setTitle('');
     setFile(null);
-    toast('Uploaded', 'success');
+    toast(t('Uploaded'), 'success');
   }
 
   async function open(d: DocRow) {
     const { data, error } = await supabase().storage.from('documents').createSignedUrl(d.file_path, 120);
-    if (error || !data) return toastError(error || 'Could not open file');
+    if (error || !data) return toastError(error || t('Could not open file'));
     window.open(data.signedUrl, '_blank', 'noopener');
   }
 
   async function remove(d: DocRow) {
-    if (!window.confirm(`Delete “${d.title}”?`)) return;
+    if (!window.confirm(t('Delete “{title}”?', { title: d.title }))) return;
     const sb = supabase();
     await sb.storage.from('documents').remove([d.file_path]);
     const { error } = await sb.from('documents').delete().eq('id', d.id);
@@ -81,12 +84,12 @@ export function Documents({ committeeId }: { committeeId: string | null }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold">{d.title}</span>
-          {badge && <span className={`badge shrink-0 ${badge === 'Global' ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-600'}`}>{badge}</span>}
+          {badge && <span className={`badge shrink-0 ${badge === 'Global' ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-600'}`}>{badge === 'Global' || badge === 'Committee' ? t(badge) : badge}</span>}
         </div>
-        <div className="text-xs text-slate-500">{labelFor(DOC_KINDS, d.kind)} · {new Date(d.created_at).toLocaleString()}</div>
+        <div className="text-xs text-slate-500">{t(labelFor(DOC_KINDS, d.kind))} · {new Date(d.created_at).toLocaleString(LOCALE[lang], { dateStyle: 'short', timeStyle: 'short' })}</div>
       </div>
-      <button className="btn btn-secondary btn-sm" onClick={() => open(d)}>Open</button>
-      {canDelete(d) && <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>Delete</button>}
+      <button className="btn btn-secondary btn-sm" onClick={() => open(d)}>{t('Open')}</button>
+      {canDelete(d) && <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>{t('Delete')}</button>}
     </li>
   );
 
@@ -100,7 +103,7 @@ export function Documents({ committeeId }: { committeeId: string | null }) {
         <span className="text-slate-400 transition group-open:rotate-90" aria-hidden>›</span>
       </summary>
       <div className="px-3 pb-3">
-        {items.length === 0 ? <p className="px-1 py-2 text-sm text-slate-400">No documents in this folder.</p> : (
+        {items.length === 0 ? <p className="px-1 py-2 text-sm text-slate-400">{t('No documents in this folder.')}</p> : (
           <ul className="space-y-2">{items.map((d) => DocItem({ d }))}</ul>
         )}
       </div>
@@ -115,33 +118,33 @@ export function Documents({ committeeId }: { committeeId: string | null }) {
   return (
     <div className="grid gap-4 lg:grid-cols-5">
       <div className="card h-fit space-y-3 lg:col-span-2">
-        <h3 className="font-bold">{committeeId ? 'Upload a document' : 'Upload a global document'}</h3>
-        {!committeeId && <p className="text-xs text-slate-500">Global documents are visible to every chair in every committee.</p>}
-        <Field label="Title"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="[Placeholder: Draft Resolution 1.1]" /></Field>
-        <Field label="Type" hint="Pick a suggestion or type your own (e.g. Position paper, Press release).">
-          <input className="input" list="doc-kinds" value={kind} onChange={(e) => setKind(e.target.value)} placeholder="[Placeholder document type]" />
+        <h3 className="font-bold">{committeeId ? t('Upload a document') : t('Upload a global document')}</h3>
+        {!committeeId && <p className="text-xs text-slate-500">{t('Global documents are visible to every chair in every committee.')}</p>}
+        <Field label={t('Title')}><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('[Placeholder: Draft Resolution 1.1]')} /></Field>
+        <Field label={t('Type')} hint={t('Pick a suggestion or type your own (e.g. Position paper, Press release).')}>
+          <input className="input" list="doc-kinds" value={kind} onChange={(e) => setKind(e.target.value)} placeholder={t('[Placeholder document type]')} />
           <datalist id="doc-kinds">
             {kindOptions.map((k) => <option key={k} value={k} />)}
           </datalist>
         </Field>
-        <Field label="File" hint={`Max ${APP_CONFIG.maxUploadMb} MB. Stored privately; only chairs and High Command can open it.`}>
+        <Field label={t('File')} hint={t('Max {n} MB. Stored privately; only chairs and High Command can open it.', { n: APP_CONFIG.maxUploadMb })}>
           <input type="file" className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200" onChange={(e) => setFile(e.target.files?.[0] || null)} />
         </Field>
-        <button className="btn btn-primary w-full" disabled={busy || !file || !title.trim() || !kind.trim()} onClick={upload}>{busy ? 'Uploading…' : 'Upload'}</button>
+        <button className="btn btn-primary w-full" disabled={busy || !file || !title.trim() || !kind.trim()} onClick={upload}>{busy ? t('Uploading…') : t('Upload')}</button>
       </div>
 
       <div className="lg:col-span-3">
         {committeeId === null ? (
           // High Command: folders. Global first, then one per committee by abbreviation.
           <div className="space-y-3">
-            {Folder({ k: 'global', name: 'Global documents', hint: 'Visible to every chair', items: globalDocs, defaultOpen: true })}
-            {committees.length === 0 && <Empty>No committees yet, so there are no committee folders.</Empty>}
+            {Folder({ k: 'global', name: t('Global documents'), hint: t('Visible to every chair'), items: globalDocs, defaultOpen: true })}
+            {committees.length === 0 && <Empty>{t('No committees yet, so there are no committee folders.')}</Empty>}
             {committees.map((c) =>
               Folder({ k: c.id, name: label(c), hint: c.abbreviation ? c.name : undefined, items: docs.filter((d) => d.committee_id === c.id) })
             )}
           </div>
         ) : docs.length === 0 ? (
-          <Empty>No documents yet.</Empty>
+          <Empty>{t('No documents yet.')}</Empty>
         ) : (
           <ul className="space-y-2">
             {docs.map((d) =>

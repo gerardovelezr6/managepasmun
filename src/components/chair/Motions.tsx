@@ -6,6 +6,8 @@ import { MOTION_TYPES, POINT_TYPES, codeFor, labelFor } from '@/lib/config';
 import { applyMotionEffects } from '@/lib/session';
 import { toast, toastError } from '@/lib/toast';
 import { CommitteeState, Delegate, EventRow, SessionRow } from '@/lib/types';
+import { LOCALE, useLang, useT } from '@/lib/i18n';
+import { Flag } from '../Flag';
 import { Empty, Field, Seg } from '../ui';
 
 const STATUS_TONE: Record<string, string> = {
@@ -28,6 +30,8 @@ export function Motions({
   update: (p: Partial<CommitteeState>) => Promise<boolean>;
   refresh: () => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const { rows: delegates } = useRows<Delegate>('delegates', committeeId, 'country');
   const { rows: events } = useRows<EventRow>('events', committeeId, 'created_at', false);
   const { rows: sessions } = useRows<SessionRow>('sessions', committeeId, 'number');
@@ -73,8 +77,8 @@ export function Motions({
     if (error) return toastError(error);
     setReasons((r) => ({ ...r, [ev.id]: '' }));
     if (ev.kind === 'motion' && status === 'passed') {
-      const msg = await applyMotionEffects(ev, committeeId, state, update, refresh);
-      if (msg) toast(msg, 'success');
+      const msg = await applyMotionEffects(ev, committeeId, state, update, refresh, t);
+      if (msg) toast(t(msg), 'success');
     }
   }
   async function del(id: string) {
@@ -89,35 +93,35 @@ export function Motions({
   return (
     <div className="grid gap-4 lg:grid-cols-5">
       <div className="card h-fit space-y-3 lg:col-span-2">
-        <Seg<'motion' | 'point'> value={kind} onChange={switchKind} options={[{ value: 'motion', label: 'Motion' }, { value: 'point', label: 'Point' }]} />
-        <Field label={kind === 'motion' ? 'Motion' : 'Point'}>
+        <Seg<'motion' | 'point'> value={kind} onChange={switchKind} options={[{ value: 'motion', label: t('Motion') }, { value: 'point', label: t('Point') }]} />
+        <Field label={kind === 'motion' ? t('Motion') : t('Point')}>
           <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-            {list.map((t) => <option key={t.value} value={t.value}>{t.code} · {t.label}</option>)}
+            {list.map((m) => <option key={m.value} value={m.value}>{m.code} · {t(m.label)}</option>)}
           </select>
         </Field>
-        <Field label="Raised by">
+        <Field label={t('Raised by')}>
           <select className="input" value={delegateId} onChange={(e) => setDelegateId(e.target.value)}>
-            <option value="">— unspecified —</option>
+            <option value="">{t('— unspecified —')}</option>
             {present.map((d) => <option key={d.id} value={d.id}>{d.country}</option>)}
           </select>
         </Field>
         {kind === 'motion' && motionDef?.needsDuration && (
-          <Field label="Total duration (minutes)">
+          <Field label={t('Total duration (minutes)')}>
             <input type="number" min={1} className="input" value={durationMin} onChange={(e) => setDurationMin(Math.max(1, Number(e.target.value) || 1))} />
           </Field>
         )}
         {kind === 'motion' && motionDef?.needsSpeaking && (
-          <Field label="Speaking time (seconds)">
+          <Field label={t('Speaking time (seconds)')}>
             <input type="number" min={5} className="input" value={speakingSec} onChange={(e) => setSpeakingSec(Math.max(5, Number(e.target.value) || 5))} />
           </Field>
         )}
-        <Field label={kind === 'motion' ? 'Topic / details' : 'Details'}>
-          <input className="input" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="[Placeholder details]" />
+        <Field label={kind === 'motion' ? t('Topic / details') : t('Details')}>
+          <input className="input" value={details} onChange={(e) => setDetails(e.target.value)} placeholder={t('[Placeholder details]')} />
         </Field>
-        <button className="btn btn-primary w-full" onClick={log}>Log {kind}</button>
+        <button className="btn btn-primary w-full" onClick={log}>{kind === 'motion' ? t('Log motion') : t('Log point')}</button>
         {kind === 'motion' && (
           <p className="text-xs text-slate-400">
-            Passing MOS opens the next session, MSS suspends it, and caucus / speaking-time / adjournment / open-debate motions are applied automatically.
+            {t('Passing MOS opens the next session, MSS suspends it, and caucus / speaking-time / adjournment / open-debate motions are applied automatically.')}
           </p>
         )}
       </div>
@@ -125,15 +129,15 @@ export function Motions({
       <div className="space-y-4 lg:col-span-3">
         {pending.length > 0 && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-            <b>{pending.length}</b> motion{pending.length > 1 ? 's' : ''} on the floor. Vote in order of disruptiveness.
+            {t(pending.length === 1 ? '{n} motion on the floor. Vote in order of disruptiveness.' : '{n} motions on the floor. Vote in order of disruptiveness.', { n: pending.length })}
           </div>
         )}
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-slate-500">{visible.length} entr{visible.length === 1 ? 'y' : 'ies'}</span>
-          <Seg<'all' | 'current'> value={scope} onChange={setScope} options={[{ value: 'all', label: 'All sessions' }, { value: 'current', label: 'Current session' }]} />
+          <span className="text-sm text-slate-500">{t(visible.length === 1 ? '{n} entry' : '{n} entries', { n: visible.length })}</span>
+          <Seg<'all' | 'current'> value={scope} onChange={setScope} options={[{ value: 'all', label: t('All sessions') }, { value: 'current', label: t('Current session') }]} />
         </div>
         {visible.length === 0 ? (
-          <Empty>No points or motions logged yet.</Empty>
+          <Empty>{t('No points or motions logged yet.')}</Empty>
         ) : (
           <ul className="space-y-2">
             {visible.map((ev) => {
@@ -141,25 +145,25 @@ export function Motions({
               return (
                 <li key={ev.id} className="card p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`badge ${ev.kind === 'motion' ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-700'}`}>{codeFor(ev.kind === 'motion' ? MOTION_TYPES : POINT_TYPES, ev.type) || (ev.kind === 'motion' ? 'Motion' : 'Point')}</span>
-                    <span className="font-semibold">{labelFor(ev.kind === 'motion' ? MOTION_TYPES : POINT_TYPES, ev.type)}</span>
-                    <span className={`badge ${STATUS_TONE[ev.status] || 'bg-slate-100 text-slate-600'}`}>{ev.status.replace('_', ' ')}</span>
+                    <span className={`badge ${ev.kind === 'motion' ? 'bg-brand/10 text-brand' : 'bg-slate-100 text-slate-700'}`}>{codeFor(ev.kind === 'motion' ? MOTION_TYPES : POINT_TYPES, ev.type) || (ev.kind === 'motion' ? t('Motion') : t('Point'))}</span>
+                    <span className="font-semibold">{t(labelFor(ev.kind === 'motion' ? MOTION_TYPES : POINT_TYPES, ev.type))}</span>
+                    <span className={`badge ${STATUS_TONE[ev.status] || 'bg-slate-100 text-slate-600'}`}>{t(ev.status.replace('_', ' '))}</span>
                     <span className="ml-auto text-xs text-slate-400">
                       {ev.session_id && sessionNo.has(ev.session_id) ? `S${sessionNo.get(ev.session_id)} · ` : ''}
-                      {new Date(ev.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(ev.created_at).toLocaleTimeString(LOCALE[lang], { hour: 'numeric', minute: '2-digit' })}
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    {ev.delegate_id ? <b>{byId.get(ev.delegate_id)?.country}</b> : 'Delegate unspecified'}
-                    {ev.duration_sec ? ` · ${ev.duration_sec / 60} min` : ''}
-                    {ev.speaking_sec ? ` · ${ev.speaking_sec}s speaking` : ''}
+                    {ev.delegate_id ? <b className="inline-flex items-center gap-1.5"><Flag country={byId.get(ev.delegate_id)?.country || ''} flag={byId.get(ev.delegate_id)?.flag} />{byId.get(ev.delegate_id)?.country}</b> : t('Delegate unspecified')}
+                    {ev.duration_sec ? ` · ${t('{n} min', { n: ev.duration_sec / 60 })}` : ''}
+                    {ev.speaking_sec ? ` · ${t('{n}s speaking', { n: ev.speaking_sec })}` : ''}
                     {ev.details ? ` · ${ev.details}` : ''}
                   </div>
-                  {ev.reason && <div className="mt-1 text-xs italic text-slate-500">Reason: {ev.reason}</div>}
+                  {ev.reason && <div className="mt-1 text-xs italic text-slate-500">{t('Reason')}: {ev.reason}</div>}
                   {open && (
                     <input
                       className="input mt-2"
-                      placeholder="Reason / note (optional), e.g. did not pass due to time concerns"
+                      placeholder={t('Reason / note (optional), e.g. did not pass due to time concerns')}
                       value={reasons[ev.id] || ''}
                       onChange={(e) => setReasons((r) => ({ ...r, [ev.id]: e.target.value }))}
                     />
@@ -167,18 +171,18 @@ export function Motions({
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {ev.kind === 'motion' && ev.status === 'pending' && (
                       <>
-                        <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'passed')}>Pass</button>
-                        <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'failed')}>Fail</button>
-                        <button className="btn btn-secondary btn-sm" onClick={() => setStatus(ev, 'withdrawn')}>Withdraw</button>
+                        <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'passed')}>{t('Pass')}</button>
+                        <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'failed')}>{t('Fail')}</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setStatus(ev, 'withdrawn')}>{t('Withdraw')}</button>
                       </>
                     )}
                     {ev.kind === 'point' && ev.status === 'raised' && (
                       <>
-                        <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'addressed')}>Addressed</button>
-                        <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'out_of_order')}>Out of order</button>
+                        <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus(ev, 'addressed')}>{t('Addressed')}</button>
+                        <button className="btn btn-sm bg-red-600 text-white hover:bg-red-700" onClick={() => setStatus(ev, 'out_of_order')}>{t('Out of order')}</button>
                       </>
                     )}
-                    <button className="btn btn-ghost btn-sm ml-auto text-slate-400" onClick={() => del(ev.id)}>Delete</button>
+                    <button className="btn btn-ghost btn-sm ml-auto text-slate-400" onClick={() => del(ev.id)}>{t('Delete')}</button>
                   </div>
                 </li>
               );

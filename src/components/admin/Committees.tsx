@@ -15,13 +15,13 @@ export function Committees() {
   const [links, setLinks] = useState<Link_[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [open, setOpen] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', abbreviation: '', topic: '', description: '' });
+  const [form, setForm] = useState({ name: '', abbreviation: '', topic: '', description: '', language: 'en' });
 
   const load = async () => {
     const sb = supabase();
     const [c, p, l, d] = await Promise.all([
       sb.from('committees').select('*').order('name'),
-      sb.from('profiles').select('*').in('role', ['chair', 'high_command', 'advisor']).order('full_name'),
+      sb.from('profiles').select('*').in('role', ['chair']).order('full_name'),
       sb.from('committee_chairs').select('*'),
       sb.from('delegates').select('committee_id'),
     ]);
@@ -41,9 +41,10 @@ export function Committees() {
       abbreviation: form.abbreviation.trim(),
       topic: form.topic.trim() || '[Placeholder topic]',
       description: form.description.trim() || null,
+      language: form.language,
     });
     if (error) return toastError(error);
-    setForm({ name: '', abbreviation: '', topic: '', description: '' });
+    setForm({ name: '', abbreviation: '', topic: '', description: '', language: form.language });
     toast('Committee created', 'success');
     load();
   }
@@ -78,6 +79,12 @@ export function Committees() {
         <Field label="Abbreviation"><input className="input" value={form.abbreviation} onChange={(e) => setForm({ ...form, abbreviation: e.target.value })} placeholder="[ABBR]" /></Field>
         <Field label="Topic"><input className="input" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="[Placeholder topic]" /></Field>
         <Field label="Description (optional)"><textarea className="input h-20" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
+        <Field label="Language" hint="Spanish translates the chair console and the projection screen for this committee only (Mexican Spanish).">
+          <select className="input" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+            <option value="en">English</option>
+            <option value="es">Español (México)</option>
+          </select>
+        </Field>
         <button className="btn btn-primary w-full">Create committee</button>
       </form>
 
@@ -90,7 +97,7 @@ export function Committees() {
             <div key={c.id} className="card">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wider text-brand">{c.abbreviation}</div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-brand">{c.abbreviation}{c.language === 'es' && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">ES</span>}</div>
                   <div className="truncate font-bold">{c.name}</div>
                   <div className="scroll-x text-sm text-slate-500">{c.topic}</div>
                   <div className="mt-1 text-xs text-slate-500">{counts[c.id] || 0} delegates · Chairs: {chairNames.length ? chairNames.join(', ') : <i>none assigned</i>}</div>
@@ -106,16 +113,22 @@ export function Committees() {
                     <Field label="Abbreviation"><input className="input" defaultValue={c.abbreviation} onBlur={(e) => e.target.value !== c.abbreviation && save(c, { abbreviation: e.target.value })} /></Field>
                     <Field label="Topic"><input className="input" defaultValue={c.topic} onBlur={(e) => e.target.value !== c.topic && save(c, { topic: e.target.value })} /></Field>
                   </div>
+                  <Field label="Language">
+                    <select className="input max-w-xs" value={c.language || 'en'} onChange={(e) => save(c, { language: e.target.value as Committee['language'] })}>
+                      <option value="en">English</option>
+                      <option value="es">Español (México)</option>
+                    </select>
+                  </Field>
                   <div>
                     <div className="label">Assigned chairs</div>
-                    {staff.length === 0 ? <p className="text-sm text-slate-500">Create chair accounts in the Users tab first.</p> : (
+                    {staff.length === 0 ? <p className="text-sm text-slate-500">Create chair accounts in the Users tab first. High Command and advisors can run every committee, so they are never assigned.</p> : (
                       <div className="flex flex-wrap gap-2">
                         {staff.map((s) => {
                           const on = chairIds.includes(s.id);
                           return (
                             <label key={s.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${on ? 'border-brand bg-brand/5 font-medium' : 'border-slate-200'}`}>
                               <input type="checkbox" checked={on} onChange={(e) => toggleChair(c.id, s.id, e.target.checked)} />
-                              {s.full_name || s.email} <span className="text-xs text-slate-400">{s.role === 'advisor' ? 'Advisor' : s.role === 'high_command' ? 'HC' : 'Chair'}</span>
+                              {s.full_name || s.email}
                             </label>
                           );
                         })}

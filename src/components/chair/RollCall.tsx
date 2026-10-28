@@ -5,11 +5,16 @@ import { useRows } from '@/lib/hooks';
 import { APP_CONFIG } from '@/lib/config';
 import { toast, toastError } from '@/lib/toast';
 import { Absence, Attendance, CommitteeState, Delegate, SessionAttendance, SessionRow } from '@/lib/types';
+import { LOCALE, useLang, useT } from '@/lib/i18n';
+import { flagFor, flagOptions } from '@/lib/countries';
+import { Flag } from '../Flag';
 import { Empty, Seg, Spinner } from '../ui';
 
-const hhmm = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 export function RollCall({ committeeId, state }: { committeeId: string; state: CommitteeState }) {
+  const t = useT();
+  const lang = useLang();
+  const hhmm = (iso: string) => new Date(iso).toLocaleTimeString(LOCALE[lang], { hour: 'numeric', minute: '2-digit' });
   const { rows: delegates, loading } = useRows<Delegate>('delegates', committeeId, 'country');
   const { rows: sessions } = useRows<SessionRow>('sessions', committeeId, 'number');
   const { rows: attendance } = useRows<SessionAttendance>('session_attendance', committeeId, 'id');
@@ -81,13 +86,18 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
     const { error } = await supabase().from('delegates').insert(rows);
     if (error) return toastError(error);
     setBulk('');
-    toast(`Added ${rows.length} delegate(s)`, 'success');
+    toast(t('Added {n} delegate(s)', { n: rows.length }), 'success');
   }
   async function remove(d: Delegate) {
-    if (!window.confirm(`Remove ${d.country}?`)) return;
+    if (!window.confirm(t('Remove {country}?', { country: d.country }))) return;
     const { error } = await supabase().from('delegates').delete().eq('id', d.id);
     if (error) toastError(error);
   }
+  async function setFlag(d: Delegate, flag: string) {
+    const { error } = await supabase().from('delegates').update({ flag: flag || null }).eq('id', d.id);
+    if (error) toastError(error);
+  }
+  const flags = flagOptions(lang);
 
   if (loading) return <Spinner />;
 
@@ -96,40 +106,41 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
       <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
         {session ? (
           <>
-            <b>Session {session.number}</b> is open. Delegates who arrive after it opened are flagged <span className="font-semibold text-amber-700">late</span> automatically.
+            <b>{t('Session {n}', { n: session.number })}</b> {t('is open. Delegates who arrive after it opened are flagged')} <span className="font-semibold text-amber-700">{t('late')}</span> {t('automatically.')}
           </>
         ) : (
           <>
-            Taking roll call for <b>Session {nextNumber}</b>. Press <b>Call to order</b> (or pass an Open session motion) to start it and save this roll call.
+            {t('Taking roll call for')} <b>{t('Session {n}', { n: nextNumber })}</b>. {t('Press')} <b>{t('Call to order')}</b> {t('(or pass an Open session motion) to start it and save this roll call.')}
           </>
         )}
-        <span className="block text-xs text-slate-500">Roll call is saved per session and resets when a session is suspended or adjourned.</span>
+        <span className="block text-xs text-slate-500">{t('Roll call is saved per session and resets when a session is suspended or adjourned.')}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Stat label="Present" value={`${present} / ${total}`} />
-        <Stat label="Present & voting" value={String(voting)} />
-        <Stat label="Late" value={String(late)} />
-        <Stat label={`Debate quorum (${debateQuorum})`} value={present >= debateQuorum && total > 0 ? 'Met' : 'Not met'} good={present >= debateQuorum && total > 0} />
-        <Stat label={`Majority (${majority})`} value={present >= majority && total > 0 ? 'Present' : 'Short'} good={present >= majority && total > 0} />
+        <Stat label={t('Present')} value={`${present} / ${total}`} />
+        <Stat label={t('Present & voting')} value={String(voting)} />
+        <Stat label={t('Late')} value={String(late)} />
+        <Stat label={`${t('Debate quorum')} (${debateQuorum})`} value={present >= debateQuorum && total > 0 ? t('Met') : t('Not met')} good={present >= debateQuorum && total > 0} />
+        <Stat label={`${t('Majority')} (${majority})`} value={present >= majority && total > 0 ? t('Present') : t('Short')} good={present >= majority && total > 0} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button className="btn btn-secondary btn-sm" onClick={() => markAll('present')}>Mark all present</button>
-        <button className="btn btn-secondary btn-sm" onClick={() => markAll('absent')}>Reset to absent</button>
-        <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setShowManage((v) => !v)}>{showManage ? 'Hide' : 'Manage'} delegate list</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => markAll('present')}>{t('Mark all present')}</button>
+        <button className="btn btn-secondary btn-sm" onClick={() => markAll('absent')}>{t('Reset to absent')}</button>
+        <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setShowManage((v) => !v)}>{showManage ? t('Hide delegate list') : t('Manage delegate list')}</button>
       </div>
 
       {showManage && (
         <div className="card space-y-2">
-          <label className="label">Add delegates (one per line: Country, Delegate Name)</label>
-          <textarea className="input h-28 font-mono" value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder={'Placeholder Country 1, Delegate Name 1\nPlaceholder Country 2, Delegate Name 2'} />
-          <button className="btn btn-primary btn-sm" onClick={addBulk} disabled={!bulk.trim()}>Add to roll</button>
+          <label className="label">{t('Add delegates (one per line: Country, Delegate Name)')}</label>
+          <textarea className="input h-28 font-mono" value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder={t('Placeholder Country 1, Delegate Name 1\nPlaceholder Country 2, Delegate Name 2')} />
+          <button className="btn btn-primary btn-sm" onClick={addBulk} disabled={!bulk.trim()}>{t('Add to roll')}</button>
+          <p className="text-xs text-slate-400">{t('Flags are picked automatically from the country name. Change one with the flag menu next to each delegate below.')}</p>
         </div>
       )}
 
       {total === 0 ? (
-        <Empty>No delegates yet. Use “Manage delegate list” to add the roll.</Empty>
+        <Empty>{t('No delegates yet. Use “Manage delegate list” to add the roll.')}</Empty>
       ) : (
         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
           {delegates.map((d) => {
@@ -139,33 +150,49 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
               <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
+                    <Flag country={d.country} flag={d.flag} />
                     <span className="truncate font-semibold">{d.country}</span>
-                    {isPresent && lateBy.get(d.id) && <span className="badge bg-amber-100 text-amber-800">Late</span>}
-                    {out && <span className="badge bg-red-100 text-red-700">Out since {hhmm(out.left_at)}</span>}
-                    {!out && (stepOuts.get(d.id) || 0) > 0 && <span className="text-xs text-slate-400">stepped out {stepOuts.get(d.id)}×</span>}
+                    {isPresent && lateBy.get(d.id) && <span className="badge bg-amber-100 text-amber-800">{t('Late')}</span>}
+                    {out && <span className="badge bg-red-100 text-red-700">{t('Out since {time}', { time: hhmm(out.left_at) })}</span>}
+                    {!out && (stepOuts.get(d.id) || 0) > 0 && <span className="text-xs text-slate-400">{t('stepped out {n}×', { n: stepOuts.get(d.id) || 0 })}</span>}
                   </div>
-                  <div className="truncate text-xs text-slate-500">{d.name || 'Delegate name placeholder'}</div>
+                  <div className="truncate text-xs text-slate-500">{d.name || t('Delegate name placeholder')}</div>
                 </div>
                 {isPresent && session && (
-                  <button className={`btn btn-sm ${lateBy.get(d.id) ? 'bg-amber-100 text-amber-800' : 'btn-ghost'}`} onClick={() => toggleLate(d)} title="Toggle late flag">
-                    Late
+                  <button className={`btn btn-sm ${lateBy.get(d.id) ? 'bg-amber-100 text-amber-800' : 'btn-ghost'}`} onClick={() => toggleLate(d)} title={t('Toggle late flag')}>
+                    {t('Late')}
                   </button>
                 )}
                 {isPresent && (out ? (
-                  <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => returned(out)}>Returned</button>
+                  <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => returned(out)}>{t('Returned')}</button>
                 ) : (
-                  <button className="btn btn-secondary btn-sm" onClick={() => stepOut(d)} title="Log that this delegate left the room">Step out</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => stepOut(d)} title={t('Log that this delegate left the room')}>{t('Step out')}</button>
                 ))}
                 <Seg<Attendance>
                   value={d.attendance}
                   onChange={(v) => mark(d.id, v)}
                   options={[
-                    { value: 'absent', label: 'Absent', tone: 'bg-slate-700 text-white' },
-                    { value: 'present', label: 'Present', tone: 'bg-emerald-600 text-white' },
-                    { value: 'present_and_voting', label: 'P&V', tone: 'bg-brand text-white' },
+                    { value: 'absent', label: t('Absent'), tone: 'bg-slate-700 text-white' },
+                    { value: 'present', label: t('Present'), tone: 'bg-emerald-600 text-white' },
+                    { value: 'present_and_voting', label: t('P&V'), tone: 'bg-brand text-white' },
                   ]}
                 />
-                {showManage && <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>Remove</button>}
+                {showManage && (
+                  <>
+                    <select
+                      className="input w-auto max-w-[9rem] py-1 text-xs"
+                      value={d.flag || ''}
+                      onChange={(e) => setFlag(d, e.target.value)}
+                      aria-label={t('Flag')}
+                      title={t('Flag')}
+                    >
+                      <option value="">{flagFor(d.country) ? `${t('Automatic')} (${flagFor(d.country)!.toUpperCase()})` : t('Automatic (none found)')}</option>
+                      <option value="none">{t('No flag')}</option>
+                      {flags.map((f) => <option key={f.code} value={f.code}>{f.name}</option>)}
+                    </select>
+                    <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>{t('Remove')}</button>
+                  </>
+                )}
               </div>
             );
           })}

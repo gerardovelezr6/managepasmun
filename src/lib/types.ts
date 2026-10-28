@@ -27,6 +27,7 @@ export interface Settings {
 
 export interface Committee {
   id: string;
+  language: 'en' | 'es';
   name: string;
   abbreviation: string;
   topic: string;
@@ -58,6 +59,7 @@ export interface CommitteeState {
 
 export interface Delegate {
   id: string;
+  flag?: string | null;
   committee_id: string;
   name: string;
   country: string;
@@ -210,6 +212,7 @@ export interface ParticipationNote {
 
 export interface WarningRow {
   id: string;
+  kind: 'warning' | 'call_of_attention';
   committee_id: string;
   session_id: string | null;
   delegate_id: string;
@@ -231,4 +234,6 @@ export interface RubricLevel {
   description: string;
   score: number;
   sort: number;
+  label_es?: string | null;
+  description_es?: string | null;
 }
