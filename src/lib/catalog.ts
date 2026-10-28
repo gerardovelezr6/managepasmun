@@ -11,6 +11,7 @@ export interface Group {
   short: string; // shown in the small badge, e.g. "PAN"
   color: string; // hex
   logo?: string; // optional image URL (uploaded by High Command)
+  aliases?: string[]; // other ways to type it in the bulk-add box
 }
 export interface Category {
   key: string;
@@ -40,9 +41,10 @@ export interface Catalog {
 
 export const DEFAULT_CATALOG: Catalog = {
   categories: [
+    { key: 'ecosoc', name: 'Economic and Social Council', name_es: 'Consejo Económico y Social', color: '#059669' },
     { key: 'general_assembly', name: 'General Assembly', name_es: 'Asamblea General', color: '#2563eb' },
     { key: 'security_council', name: 'Security Council', name_es: 'Consejo de Seguridad', color: '#dc2626' },
-    { key: 'ecosoc', name: 'Economic and Social Council', name_es: 'Consejo Económico y Social', color: '#059669' },
+    { key: 'junior_high', name: 'Junior High', name_es: 'Secundaria', color: '#d97706' },
     { key: 'specialized', name: 'Specialized Committees', name_es: 'Comités Especializados', color: '#7c3aed' },
   ],
   types: [
@@ -50,15 +52,15 @@ export const DEFAULT_CATALOG: Catalog = {
     { key: 'specialized', name: 'Specialized', name_es: 'Especializado', default_category: 'specialized', label_field: 'Country', label_field_es: 'País', flag: 'country', groups: [], bulk: ['country', 'name'] },
     {
       key: 'us_senate', name: 'US Senate', name_es: 'Senado de EE. UU.', default_category: 'specialized',
-      label_field: 'State', label_field_es: 'Estado', flag: 'us_state', group_label: 'Party', group_label_es: 'Partido', group_required: true, bulk: ['country', 'name', 'group'],
+      label_field: 'Senator (State)', label_field_es: 'Senador (Estado)', flag: 'us_state', group_label: 'Party', group_label_es: 'Partido', group_required: true, bulk: ['country', 'group', 'name'],
       groups: [
-        { key: 'democrat', name: 'Democrat', name_es: 'Demócrata', short: 'D', color: '#1d4ed8' },
-        { key: 'republican', name: 'Republican', name_es: 'Republicano', short: 'R', color: '#dc2626' },
+        { key: 'democrat', name: 'Democratic Party', name_es: 'Partido Demócrata', short: 'D', color: '#1d4ed8', aliases: ['democrat', 'democratic', 'dem'] },
+        { key: 'republican', name: 'Republican Party', name_es: 'Partido Republicano', short: 'R', color: '#dc2626', aliases: ['republican', 'rep', 'gop'] },
       ],
     },
     {
       key: 'mx_senate', name: 'Senado de México', name_es: 'Senado de México', default_category: 'specialized',
-      label_field: 'State', label_field_es: 'Entidad', flag: 'none', group_label: 'Party', group_label_es: 'Partido', group_required: true, bulk: ['country', 'name', 'group'],
+      label_field: 'Entidad', label_field_es: 'Entidad', flag: 'none', group_label: 'Partido', group_label_es: 'Partido', group_required: true, bulk: ['country', 'group', 'name'],
       groups: [
         { key: 'morena', name: 'MORENA', short: 'MORENA', color: '#8c1d2f' },
         { key: 'pvem', name: 'PVEM', short: 'PVEM', color: '#16a34a' },
@@ -97,5 +99,6 @@ export const slug = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀
 export function matchGroup(type: CommitteeType, text: string): Group | null {
   const q = slug(text);
   if (!q) return null;
-  return type.groups.find((g) => [g.key, g.name, g.name_es || '', g.short].some((v) => slug(v) === q)) || null;
+  const bare = (v: string) => slug(v).replace(/^partido_/, '').replace(/_party$/, '').replace(/_partido$/, '');
+  return type.groups.find((g) => [g.key, g.name, g.name_es || '', g.short, ...(g.aliases || [])].some((v) => slug(v) === q || bare(v) === bare(text))) || null;
 }

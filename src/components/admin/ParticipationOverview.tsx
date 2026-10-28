@@ -22,7 +22,7 @@ export function ParticipationOverview() {
   useLiveReload(['committees', 'delegates', 'sessions', 'participation_entries', 'vote_records', 'warnings'], async () => {
     const sb = supabase();
     const [c, d, s, e, r, w] = await Promise.all([
-      sb.from('committees').select('*').order('name'),
+      sb.from('committees').select('*').order('sort_order').order('name'),
       sb.from('delegates').select('*'),
       sb.from('sessions').select('*').order('number'),
       sb.from('participation_entries').select('*'),

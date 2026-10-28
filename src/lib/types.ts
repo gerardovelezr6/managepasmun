@@ -32,6 +32,7 @@ export interface Committee {
   language: 'en' | 'es';
   category?: string | null;
   type?: string;
+  sort_order?: number;
   name: string;
   abbreviation: string;
   topic: string;
@@ -146,6 +147,7 @@ export interface CommitteeAnalytics {
   committee_id: string;
   category?: string | null;
   type?: string;
+  sort_order?: number;
   name: string;
   abbreviation: string;
   topic: string;

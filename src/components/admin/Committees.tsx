@@ -23,13 +23,15 @@ export function Committees() {
   const [live, setLive] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const [drag, setDrag] = useState<string | null>(null);
+  const [over, setOver] = useState<{ id: string; after: boolean } | { cat: string } | null>(null);
   const [catFilter, setCatFilter] = useState('all');
   const [form, setForm] = useState({ name: '', abbreviation: '', topic: '', description: '', language: 'en', type: 'standard', category: '' });
 
   const load = async () => {
     const sb = supabase();
     const [c, p, l, d, st] = await Promise.all([
-      sb.from('committees').select('*').order('name'),
+      sb.from('committees').select('*').order('sort_order').order('name'),
       sb.from('profiles').select('*').in('role', ['chair']).order('full_name'),
       sb.from('committee_chairs').select('*'),
       sb.from('delegates').select('committee_id'),
@@ -60,6 +62,7 @@ export function Committees() {
       language: form.language,
       type: form.type,
       category: form.category || null,
+      sort_order: committees.reduce((m, c) => Math.max(m, c.sort_order || 0), 0) + 1,
     }).select('id').single();
     if (error) return toastError(error);
     if (type.secret_topic) {
@@ -126,14 +129,46 @@ export function Committees() {
     else toast('Confidential topics locked again', 'success');
   }
 
+  // Drag and drop: the committee lands before/after the one it is dropped on (taking over its category),
+  // or at the end of a category when dropped on that category's heading. Every committee is then renumbered.
+  async function move(id: string, target: { id: string; after: boolean } | { cat: string }) {
+    const catKeys = [...catalog.categories.map((c) => c.key), ''];
+    const catOf = (c: Committee) => categoryOf(catalog, c.category)?.key || '';
+    const ordered = [...committees].sort((a, b) => catKeys.indexOf(catOf(a)) - catKeys.indexOf(catOf(b)) || (a.sort_order || 0) - (b.sort_order || 0) || a.name.localeCompare(b.name));
+    const moving = ordered.find((c) => c.id === id);
+    if (!moving) return;
+    const rest = ordered.filter((c) => c.id !== id);
+    let cat: string;
+    let at: number;
+    if ('cat' in target) {
+      cat = target.cat;
+      const last = rest.map((c, i) => (catOf(c) === cat ? i : -1)).filter((i) => i >= 0).pop();
+      at = last === undefined ? rest.filter((c) => catKeys.indexOf(catOf(c)) < catKeys.indexOf(cat)).length : last + 1;
+    } else {
+      const i = rest.findIndex((c) => c.id === target.id);
+      if (i < 0) return;
+      cat = catOf(rest[i]);
+      at = i + (target.after ? 1 : 0);
+    }
+    const next = [...rest];
+    next.splice(at, 0, { ...moving, category: cat || null });
+    const changed = next.map((c, i) => ({ c, order: i + 1 })).filter(({ c, order }) => (c.sort_order || 0) !== order || (c.id === id && (moving.category || '') !== cat));
+    setCommittees(next.map((c, i) => ({ ...c, sort_order: i + 1 })));
+    const results = await Promise.all(changed.map(({ c, order }) => supabase().from('committees').update(c.id === id ? { sort_order: order, category: cat || null } : { sort_order: order }).eq('id', c.id)));
+    const failed = results.find((r) => r.error);
+    if (failed?.error) toastError(failed.error);
+    load();
+  }
+  const endDrag = () => { setDrag(null); setOver(null); };
+
   // Committees grouped by category, in the catalog's order, uncategorized last.
   const groups = useMemo(() => {
     const needle = q.trim().toLowerCase();
     const list = committees.filter((c) => (catFilter === 'all' || (c.category || '') === (catFilter === 'none' ? '' : catFilter)) && (!needle || `${c.name} ${c.abbreviation} ${topicOf(c)}`.toLowerCase().includes(needle)));
     const keys = [...catalog.categories.map((c) => c.key), ''];
-    return keys.map((k) => ({ key: k, cat: categoryOf(catalog, k), items: list.filter((c) => (categoryOf(catalog, c.category)?.key || '') === k) })).filter((g) => g.items.length);
+    return keys.map((k) => ({ key: k, cat: categoryOf(catalog, k), items: list.filter((c) => (categoryOf(catalog, c.category)?.key || '') === k) })).filter((g) => g.items.length || (drag && catFilter === 'all' && !needle && (g.key || committees.some((c) => !categoryOf(catalog, c.category)))));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [committees, q, catFilter, catalog, secrets]);
+  }, [committees, q, catFilter, catalog, secrets, drag]);
 
   const started = !!settings.conference_started_at;
   const anySecret = committees.some((c) => typeFor(c).secret_topic);
@@ -195,19 +230,34 @@ export function Committees() {
             {groups.length === 0 && <Empty>{committees.length ? 'No committees match.' : 'No committees yet.'}</Empty>}
             {groups.map((g) => (
               <section key={g.key || 'none'}>
-                <h4 className="sticky top-0 z-10 -mx-3 mb-2 flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                <h4
+                  onDragOver={(e) => { if (drag) { e.preventDefault(); setOver({ cat: g.key }); } }}
+                  onDrop={(e) => { e.preventDefault(); if (drag) move(drag, { cat: g.key }); endDrag(); }}
+                  className={`sticky top-0 z-10 -mx-3 mb-2 flex items-center gap-2 border-b bg-slate-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500 ${over && "cat" in over && over.cat === g.key ? "border-brand text-brand" : "border-slate-200"}`}>
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: g.cat?.color || '#94a3b8' }} />
                   {g.cat?.name || 'Uncategorized'} <span className="font-medium normal-case text-slate-400">({g.items.length})</span>
                 </h4>
                 <div className="space-y-2">
+                  {g.items.length === 0 && <div className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-center text-xs text-slate-400">Drop here</div>}
                   {g.items.map((c) => {
                     const chairIds = links.filter((l) => l.committee_id === c.id).map((l) => l.user_id);
                     const chairNames = staff.filter((s) => chairIds.includes(s.id)).map((s) => s.full_name || s.email);
                     const type = typeFor(c);
                     const topic = topicOf(c);
                     return (
-                      <div key={c.id} className="card">
+                      <div
+                        key={c.id}
+                        data-card
+                        onDragOver={(e) => { if (!drag || drag === c.id) return; e.preventDefault(); const r = e.currentTarget.getBoundingClientRect(); setOver({ id: c.id, after: e.clientY > r.top + r.height / 2 }); }}
+                        onDrop={(e) => { e.preventDefault(); if (drag && over && "id" in over) move(drag, over); endDrag(); }}
+                        className={`card relative ${drag === c.id ? "opacity-40" : ""} ${over && "id" in over && over.id === c.id ? (over.after ? "!shadow-[0_3px_0_0_rgb(var(--brand))]" : "!shadow-[0_-3px_0_0_rgb(var(--brand))]") : ""}`}>
                         <div className="flex flex-wrap items-center gap-3">
+                          <span
+                            draggable
+                            title="Drag to reorder or to move to another category"
+                            onDragStart={(e) => { setDrag(c.id); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", c.id); const card = (e.currentTarget as HTMLElement).closest("[data-card]"); if (card) e.dataTransfer.setDragImage(card, 24, 24); }}
+                            onDragEnd={endDrag}
+                            className="cursor-grab select-none px-1 text-lg leading-none text-slate-300 hover:text-slate-500 active:cursor-grabbing" aria-label="Drag handle">⋮⋮</span>
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand">
                               {c.abbreviation}
