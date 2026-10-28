@@ -121,7 +121,7 @@ function Display({ id }: { id: string }) {
               )}
               <div className="text-lg font-semibold uppercase tracking-[0.25em] text-slate-400">{speaker ? t('Now speaking') : t('Floor is open')}</div>
               <div className="mt-2 flex items-center justify-center gap-5 text-7xl font-black leading-tight">
-                {speaker && <Flag country={speaker.country} flag={speaker.flag} className="!text-6xl" />}
+                {speaker && <Flag country={speaker.country} flag={speaker.flag} group={speaker.group_key} className="!text-6xl" />}
                 <span>{speaker ? speaker.country : '—'}</span>
                 {speaker && <GroupBadge groupKey={speaker.group_key} className="!px-4 !py-1.5 !text-2xl" full />}
               </div>
@@ -138,7 +138,7 @@ function Display({ id }: { id: string }) {
               <ul className="space-y-1.5">
                 {explanations.map((r) => (
                   <li key={r.id} className="text-xl">
-                    <span className="inline-flex items-center gap-2 font-bold"><Flag country={byId.get(r.delegate_id)?.country || ''} flag={byId.get(r.delegate_id)?.flag} />{byId.get(r.delegate_id)?.country}</span>
+                    <span className="inline-flex items-center gap-2 font-bold"><Flag country={byId.get(r.delegate_id)?.country || ''} flag={byId.get(r.delegate_id)?.flag} group={byId.get(r.delegate_id)?.group_key} />{byId.get(r.delegate_id)?.country}</span>
                     <span className={r.choice === 'for' ? 'text-emerald-300' : r.choice === 'against' ? 'text-red-300' : 'text-slate-300'}> · {r.choice === 'for' ? t('In favor') : r.choice === 'against' ? t('Against') : t('Abstention')}</span>
                   </li>
                 ))}
@@ -173,7 +173,7 @@ function Display({ id }: { id: string }) {
                 {queue.slice(0, 8).map((e, i) => (
                   <li key={e.id} className="flex items-center gap-3 text-2xl">
                     <span className="w-8 text-right font-mono text-slate-500">{i + 1}</span>
-                    <span className={`inline-flex items-center gap-3 ${i === 0 ? 'font-bold text-white' : 'text-slate-200'}`}><Flag country={byId.get(e.delegate_id)?.country || ''} flag={byId.get(e.delegate_id)?.flag} className="!text-xl" />{byId.get(e.delegate_id)?.country}<GroupBadge groupKey={byId.get(e.delegate_id)?.group_key} /></span>
+                    <span className={`inline-flex items-center gap-3 ${i === 0 ? 'font-bold text-white' : 'text-slate-200'}`}><Flag country={byId.get(e.delegate_id)?.country || ''} flag={byId.get(e.delegate_id)?.flag} group={byId.get(e.delegate_id)?.group_key} className="!text-xl" />{byId.get(e.delegate_id)?.country}<GroupBadge groupKey={byId.get(e.delegate_id)?.group_key} /></span>
                   </li>
                 ))}
                 {queue.length > 8 && <li className="pl-11 text-slate-500">{t('+ {n} more', { n: queue.length - 8 })}</li>}

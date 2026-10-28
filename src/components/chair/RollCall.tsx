@@ -158,7 +158,7 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
           <textarea className="input h-28 font-mono" value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder={`${bulkExample}\n${bulkExample}`} />
           {type.groups.length > 0 && <p className="text-xs text-slate-500">{groupLabel}: {type.groups.map((g) => nameIn(g, lang)).join(', ')}</p>}
           <button className="btn btn-primary btn-sm" onClick={addBulk} disabled={!bulk.trim()}>{t('Add to roll')}</button>
-          <p className="text-xs text-slate-400">{type.flag === 'none' ? '' : t('Flags are picked automatically from the country name. Change one with the flag menu next to each delegate below.')}</p>
+          <p className="text-xs text-slate-400">{type.flag === 'none' || type.flag === 'group_logo' ? '' : t('Flags are picked automatically from the country name. Change one with the flag menu next to each delegate below.')}</p>
         </div>
       )}
 
@@ -173,7 +173,7 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
               <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Flag country={d.country} flag={d.flag} />
+                    <Flag country={d.country} flag={d.flag} group={d.group_key} />
                     <span className="truncate font-semibold">{d.country}</span>
                     <GroupBadge groupKey={d.group_key} />
                     {isPresent && lateBy.get(d.id) && <span className="badge bg-amber-100 text-amber-800">{t('Late')}</span>}
@@ -209,7 +209,7 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
                         {type.groups.map((g) => <option key={g.key} value={g.key}>{nameIn(g, lang)}</option>)}
                       </select>
                     )}
-                    {type.flag !== 'none' && <select
+                    {type.flag !== 'none' && type.flag !== 'group_logo' && <select
                       className="input w-auto max-w-[9rem] py-1 text-xs"
                       value={d.flag || ''}
                       onChange={(e) => setFlag(d, e.target.value)}

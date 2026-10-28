@@ -11,6 +11,7 @@ const FLAG_SOURCES: { value: FlagSource; label: string }[] = [
   { value: 'country', label: 'Country flag (from the country name)' },
   { value: 'country_in_text', label: 'Country flag, found inside longer text' },
   { value: 'us_state', label: 'US state flag' },
+  { value: 'group_logo', label: 'Party / side logo (uploaded below)' },
   { value: 'none', label: 'No flag' },
 ];
 const BULK: { value: string; label: string; cols: BulkColumn[] }[] = [

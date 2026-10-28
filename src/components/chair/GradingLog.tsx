@@ -82,7 +82,7 @@ export function GradingLog({ committeeId, committeeName }: { committeeId: string
                   return (
                     <tr key={st.delegate.id} className="hover:bg-slate-50">
                       <td className="px-3 py-2 text-slate-400">{i + 1}</td>
-                      <td className="px-3 py-2 font-semibold"><span className="inline-flex items-center gap-2"><Flag country={st.delegate.country} flag={st.delegate.flag} />{st.delegate.country}</span></td>
+                      <td className="px-3 py-2 font-semibold"><span className="inline-flex items-center gap-2"><Flag country={st.delegate.country} flag={st.delegate.flag} group={st.delegate.group_key} />{st.delegate.country}</span></td>
                       {sessions.map((s) => {
                         const a = attBy.get(`${s.id}:${st.delegate.id}`);
                         const missed = !a || a.attendance === 'absent';

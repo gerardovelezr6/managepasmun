@@ -154,7 +154,7 @@ export function Motions({
                     </span>
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    {ev.delegate_id ? <b className="inline-flex items-center gap-1.5"><Flag country={byId.get(ev.delegate_id)?.country || ''} flag={byId.get(ev.delegate_id)?.flag} />{byId.get(ev.delegate_id)?.country}</b> : t('Delegate unspecified')}
+                    {ev.delegate_id ? <b className="inline-flex items-center gap-1.5"><Flag country={byId.get(ev.delegate_id)?.country || ''} flag={byId.get(ev.delegate_id)?.flag} group={byId.get(ev.delegate_id)?.group_key} />{byId.get(ev.delegate_id)?.country}</b> : t('Delegate unspecified')}
                     {ev.duration_sec ? ` · ${t('{n} min', { n: ev.duration_sec / 60 })}` : ''}
                     {ev.speaking_sec ? ` · ${t('{n}s speaking', { n: ev.speaking_sec })}` : ''}
                     {ev.details ? ` · ${ev.details}` : ''}

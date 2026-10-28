@@ -300,7 +300,7 @@ export function usStateIn(text: string | null | undefined): string | null {
 }
 
 // One entry point for every committee type: which flag code (ISO code, or 'us-xx' for a state) goes with this text.
-export function resolveFlag(source: 'country' | 'country_in_text' | 'us_state' | 'none', text: string | null | undefined, override?: string | null): string | null {
+export function resolveFlag(source: 'country' | 'country_in_text' | 'us_state' | 'group_logo' | 'none', text: string | null | undefined, override?: string | null): string | null {
   if (override === 'none') return null;
   if (override) return override.toLowerCase();
   if (source === 'none') return null;

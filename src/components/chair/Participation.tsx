@@ -227,7 +227,7 @@ export function Participation({ committeeId, state }: { committeeId: string; sta
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="min-w-[10rem] flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Flag country={d.country} flag={d.flag} />
+                      <Flag country={d.country} flag={d.flag} group={d.group_key} />
                       <span className="font-bold">{d.country}</span>
                       <GroupBadge groupKey={d.group_key} />
                       {a?.late && <span className="badge bg-amber-100 text-amber-800">{t('Late')}</span>}
