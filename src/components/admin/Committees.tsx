@@ -191,11 +191,11 @@ export function Committees() {
             )}
           </div>
 
-          <div className="space-y-4 overflow-y-auto p-3">
+          <div className="space-y-2 overflow-y-auto px-3 pb-3">
             {groups.length === 0 && <Empty>{committees.length ? 'No committees match.' : 'No committees yet.'}</Empty>}
             {groups.map((g) => (
               <section key={g.key || 'none'}>
-                <h4 className="sticky top-0 z-10 -mx-1 mb-2 flex items-center gap-2 bg-slate-50/95 px-1 py-1 text-xs font-bold uppercase tracking-wider text-slate-500 backdrop-blur">
+                <h4 className="sticky top-0 z-10 -mx-3 mb-2 flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-500">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: g.cat?.color || '#94a3b8' }} />
                   {g.cat?.name || 'Uncategorized'} <span className="font-medium normal-case text-slate-400">({g.items.length})</span>
                 </h4>
