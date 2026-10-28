@@ -114,3 +114,7 @@ Run `supabase/migrations/007_committee_types.sql` in the SQL Editor (safe to re-
 Run `supabase/migrations/008_order_junior_high.sql` after 007. It adds the Junior High category (ECOSOC listed first), the "Senator (State), Party, Delegate name" columns for the US Senate, "Entidad, Partido, Nombre del delegado" for the Senado de México, and the manual committee order. Committees and categories are reordered by dragging ⋮⋮ (Committees tab and Types & categories tab). Party logos are uploaded per party under Types & categories (square or wide PNG/SVG, about 128 px high works well).
 
 Run `supabase/migrations/009_party_logo_slot.sql` too: the Senado de México now shows each party's logo in the same slot where the US Senate shows a state flag. Until a logo is uploaded under Types & categories, the party's coloured badge is all that shows.
+
+## Flag sources
+
+Country flags come from the `flag-icons` package. US state and territory flags in `public/flags/us/` come from the `region-flags` collection (public-domain Wikimedia files, optimised with svgo).
