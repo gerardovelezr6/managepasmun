@@ -23,13 +23,13 @@ export function StatusBadge({ status }: { status?: string | null }) {
 
 export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: string; count?: number }[]; value: string; onChange: (id: string) => void }) {
   return (
-    <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-slate-200 px-1">
+    <div className="flex gap-1 overflow-x-auto border-b border-slate-200">
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
-          className={`whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-medium transition ${
-            value === t.id ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
+          className={`-mb-px whitespace-nowrap border-b-[3px] px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] transition-colors duration-200 ${
+            value === t.id ? 'border-brand text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-900'
           }`}
         >
           {t.label}

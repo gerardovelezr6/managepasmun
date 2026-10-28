@@ -65,15 +65,15 @@ function Display({ id }: { id: string }) {
   const present = delegates.filter((d) => d.attendance !== 'absent').length;
   const quorum = Math.ceil(delegates.length * APP_CONFIG.quorum.debateFraction);
 
-  if (missing) return <div className="flex min-h-screen items-center justify-center bg-stage text-2xl text-white">{t('Committee not found')}</div>;
-  if (!committee || !state) return <div className="flex min-h-screen items-center justify-center bg-stage text-xl text-slate-400">{t('Connecting…')}</div>;
+  if (missing) return <div className="flex min-h-screen items-center justify-center bg-stage text-2xl text-white on-dark">{t('Committee not found')}</div>;
+  if (!committee || !state) return <div className="flex min-h-screen items-center justify-center bg-stage on-dark text-xl text-slate-400">{t('Connecting…')}</div>;
 
   const speaker = state.current_speaker_id ? byId.get(state.current_speaker_id) : null;
   const sessionNumber = sessions.find((s) => s.id === state.current_session_id)?.number;
   const live = state.status === 'in_session';
 
   return (
-    <div className="flex min-h-screen flex-col bg-stage text-white">
+    <div className="flex min-h-screen flex-col bg-stage text-white on-dark">
       {/* Header */}
       <header className="flex items-center gap-5 border-b border-stage-line px-8 py-4">
         <BrandMark size={52} />
@@ -123,7 +123,7 @@ function Display({ id }: { id: string }) {
               <div className="mt-2 flex items-center justify-center gap-5 text-7xl font-black leading-tight">
                 {speaker && <Flag country={speaker.country} flag={speaker.flag} group={speaker.group_key} className="!text-6xl" />}
                 <span>{speaker ? speaker.country : '—'}</span>
-                {speaker && <GroupBadge groupKey={speaker.group_key} className="!px-4 !py-1.5 !text-2xl" full />}
+                {speaker && <GroupBadge solid groupKey={speaker.group_key} className="!px-4 !py-1.5 !text-2xl" full />}
               </div>
               <LiveTimer timer={state.speaker_timer} className="mt-6 block font-mono text-[9rem] font-black leading-none" />
             </div>
@@ -173,7 +173,7 @@ function Display({ id }: { id: string }) {
                 {queue.slice(0, 8).map((e, i) => (
                   <li key={e.id} className="flex items-center gap-3 text-2xl">
                     <span className="w-8 text-right font-mono text-slate-500">{i + 1}</span>
-                    <span className={`inline-flex items-center gap-3 ${i === 0 ? 'font-bold text-white' : 'text-slate-200'}`}><Flag country={byId.get(e.delegate_id)?.country || ''} flag={byId.get(e.delegate_id)?.flag} group={byId.get(e.delegate_id)?.group_key} className="!text-xl" />{byId.get(e.delegate_id)?.country}<GroupBadge groupKey={byId.get(e.delegate_id)?.group_key} /></span>
+                    <span className={`inline-flex items-center gap-3 ${i === 0 ? 'font-bold text-white' : 'text-slate-200'}`}><Flag country={byId.get(e.delegate_id)?.country || ''} flag={byId.get(e.delegate_id)?.flag} group={byId.get(e.delegate_id)?.group_key} className="!text-xl" />{byId.get(e.delegate_id)?.country}<GroupBadge solid groupKey={byId.get(e.delegate_id)?.group_key} /></span>
                   </li>
                 ))}
                 {queue.length > 8 && <li className="pl-11 text-slate-500">{t('+ {n} more', { n: queue.length - 8 })}</li>}
