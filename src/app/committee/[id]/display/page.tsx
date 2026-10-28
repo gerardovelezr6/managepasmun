@@ -8,11 +8,23 @@ import { APP_CONFIG, MODE_LABEL, MOTION_TYPES, SESSION_STATUS_LABEL, codeFor, la
 import { useClockSync, useCommittee, useCommitteeState, useRows, useTick } from '@/lib/hooks';
 import { THRESHOLD_LABEL, tally, voteOutcome } from '@/lib/session';
 import { Delegate, EventRow, SessionRow, SpeakerEntry, VoteRecord, VoteRow } from '@/lib/types';
+import { LangProvider, useT } from '@/lib/i18n';
+import { Flag } from '@/components/Flag';
 
 // Read-only, clutter-free projection screen for delegates. No controls, no login.
 // Press "F" for fullscreen.
 export default function DisplayPage() {
   const { id } = useParams<{ id: string }>();
+  const { committee } = useCommittee(id);
+  return (
+    <LangProvider lang={committee?.language}>
+      <Display id={id} />
+    </LangProvider>
+  );
+}
+
+function Display({ id }: { id: string }) {
+  const t = useT();
   const { settings } = useSettings();
   const { committee, missing } = useCommittee(id);
   const { state } = useCommitteeState(id);
@@ -50,8 +62,8 @@ export default function DisplayPage() {
   const present = delegates.filter((d) => d.attendance !== 'absent').length;
   const quorum = Math.ceil(delegates.length * APP_CONFIG.quorum.debateFraction);
 
-  if (missing) return <div className="flex min-h-screen items-center justify-center bg-stage text-2xl text-white">Committee not found</div>;
-  if (!committee || !state) return <div className="flex min-h-screen items-center justify-center bg-stage text-xl text-slate-400">Connecting…</div>;
+  if (missing) return <div className="flex min-h-screen items-center justify-center bg-stage text-2xl text-white">{t('Committee not found')}</div>;
+  if (!committee || !state) return <div className="flex min-h-screen items-center justify-center bg-stage text-xl text-slate-400">{t('Connecting…')}</div>;
 
   const speaker = state.current_speaker_id ? byId.get(state.current_speaker_id) : null;
   const sessionNumber = sessions.find((s) => s.id === state.current_session_id)?.number;
@@ -65,7 +77,7 @@ export default function DisplayPage() {
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">{settings.conference_name}</div>
           <h1 className="truncate text-3xl font-extrabold">{committee.name}</h1>
-          <p className="scroll-x text-lg text-slate-300">Topic: {committee.topic}</p>
+          <p className="scroll-x text-lg text-slate-300">{t('Topic')}: {committee.topic}</p>
         </div>
         <div className="text-right">
           <div
@@ -73,9 +85,9 @@ export default function DisplayPage() {
               live ? 'bg-emerald-500 text-black' : state.status === 'suspended' ? 'bg-amber-400 text-black' : 'bg-slate-700 text-slate-200'
             }`}
           >
-            {SESSION_STATUS_LABEL[state.status]}{live && sessionNumber ? ` · Session ${sessionNumber}` : ''}
+            {t(SESSION_STATUS_LABEL[state.status])}{live && sessionNumber ? ` · ${t('Session {n}', { n: sessionNumber })}` : ''}
           </div>
-          {live && <div className="mt-2 text-sm text-slate-400">{MODE_LABEL[state.mode]}</div>}
+          {live && <div className="mt-2 text-sm text-slate-400">{t(MODE_LABEL[state.mode])}</div>}
         </div>
       </header>
 
@@ -84,14 +96,14 @@ export default function DisplayPage() {
         <section className="flex flex-col items-center justify-center rounded-3xl border border-stage-line bg-stage-raised p-8 text-center lg:col-span-2">
           {!live ? (
             <div>
-              <div className="text-6xl font-extrabold">{state.status === 'not_started' ? 'Session will begin shortly' : state.status === 'suspended' ? 'Session suspended' : 'Session adjourned'}</div>
-              <div className="mt-4 text-2xl text-slate-400">{present} of {delegates.length} delegates present</div>
+              <div className="text-6xl font-extrabold">{state.status === 'not_started' ? t('Session will begin shortly') : state.status === 'suspended' ? t('Session suspended') : t('Session adjourned')}</div>
+              <div className="mt-4 text-2xl text-slate-400">{t('{present} of {total} delegates present', { present, total: delegates.length })}</div>
             </div>
           ) : state.mode === 'voting' && openVote ? (
             <VotePanel vote={openVote} records={records} />
           ) : state.mode === 'unmoderated' ? (
             <div>
-              <div className="text-xl font-semibold uppercase tracking-[0.25em] text-accent">Unmoderated caucus</div>
+              <div className="text-xl font-semibold uppercase tracking-[0.25em] text-accent">{t('Unmoderated caucus')}</div>
               <div className="mt-2 text-3xl text-slate-200">{state.caucus_topic}</div>
               <LiveTimer timer={state.caucus_timer} className="mt-6 block font-mono text-[11rem] font-black leading-none" />
             </div>
@@ -99,13 +111,16 @@ export default function DisplayPage() {
             <div className="w-full">
               {state.mode === 'moderated' && (
                 <div className="mb-6">
-                  <div className="text-lg font-semibold uppercase tracking-[0.25em] text-accent">Moderated caucus · {state.caucus_speaking_sec}s per speaker</div>
+                  <div className="text-lg font-semibold uppercase tracking-[0.25em] text-accent">{t('Moderated caucus')} · {t('{n}s per speaker', { n: state.caucus_speaking_sec || 0 })}</div>
                   <div className="mt-1 text-2xl text-slate-200">{state.caucus_topic}</div>
-                  <div className="mt-2 text-slate-400">Caucus time remaining <LiveTimer timer={state.caucus_timer} className="font-mono text-3xl font-bold text-white" /></div>
+                  <div className="mt-2 text-slate-400">{t('Caucus time remaining')} <LiveTimer timer={state.caucus_timer} className="font-mono text-3xl font-bold text-white" /></div>
                 </div>
               )}
-              <div className="text-lg font-semibold uppercase tracking-[0.25em] text-slate-400">{speaker ? 'Now speaking' : 'Floor is open'}</div>
-              <div className="mt-2 text-7xl font-black leading-tight">{speaker ? speaker.country : '—'}</div>
+              <div className="text-lg font-semibold uppercase tracking-[0.25em] text-slate-400">{speaker ? t('Now speaking') : t('Floor is open')}</div>
+              <div className="mt-2 flex items-center justify-center gap-5 text-7xl font-black leading-tight">
+                {speaker && <Flag country={speaker.country} flag={speaker.flag} className="!text-6xl" />}
+                <span>{speaker ? speaker.country : '—'}</span>
+              </div>
               <LiveTimer timer={state.speaker_timer} className="mt-6 block font-mono text-[9rem] font-black leading-none" />
             </div>
           )}
@@ -115,12 +130,12 @@ export default function DisplayPage() {
         <aside className="flex flex-col gap-6">
           {explanations.length > 0 && state.mode !== 'voting' && (
             <div className="rounded-3xl border border-accent/60 bg-accent/10 p-5">
-              <div className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-accent">Right of explanation</div>
+              <div className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-accent">{t('Right of explanation')}</div>
               <ul className="space-y-1.5">
                 {explanations.map((r) => (
                   <li key={r.id} className="text-xl">
-                    <span className="font-bold">{byId.get(r.delegate_id)?.country}</span>
-                    <span className={r.choice === 'for' ? 'text-emerald-300' : r.choice === 'against' ? 'text-red-300' : 'text-slate-300'}> · {r.choice === 'for' ? 'In favor' : r.choice === 'against' ? 'Against' : 'Abstention'}</span>
+                    <span className="inline-flex items-center gap-2 font-bold"><Flag country={byId.get(r.delegate_id)?.country || ''} flag={byId.get(r.delegate_id)?.flag} />{byId.get(r.delegate_id)?.country}</span>
+                    <span className={r.choice === 'for' ? 'text-emerald-300' : r.choice === 'against' ? 'text-red-300' : 'text-slate-300'}> · {r.choice === 'for' ? t('In favor') : r.choice === 'against' ? t('Against') : t('Abstention')}</span>
                   </li>
                 ))}
               </ul>
@@ -128,16 +143,16 @@ export default function DisplayPage() {
           )}
           {pendingMotions.length > 0 && (
             <div className="rounded-3xl border border-accent/60 bg-accent/10 p-5">
-              <div className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-accent">Motions on the floor</div>
+              <div className="mb-2 text-sm font-bold uppercase tracking-[0.2em] text-accent">{t('Motions on the floor')}</div>
               <ul className="space-y-2">
                 {pendingMotions.slice(0, 4).map((m) => (
                   <li key={m.id} className="text-lg">
                     <span className="mr-2 rounded bg-accent/20 px-1.5 py-0.5 font-mono text-sm font-bold text-accent">{codeFor(MOTION_TYPES, m.type)}</span>
-                    <span className="font-bold">{labelFor(MOTION_TYPES, m.type)}</span>
+                    <span className="font-bold">{t(labelFor(MOTION_TYPES, m.type))}</span>
                     {m.delegate_id && <span className="text-slate-300"> · {byId.get(m.delegate_id)?.country}</span>}
                     {(m.duration_sec || m.speaking_sec) && (
                       <span className="text-slate-400">
-                        {' '}({m.duration_sec ? `${m.duration_sec / 60} min` : ''}{m.duration_sec && m.speaking_sec ? ' / ' : ''}{m.speaking_sec ? `${m.speaking_sec}s` : ''})
+                        {' '}({m.duration_sec ? t('{n} min', { n: m.duration_sec / 60 }) : ''}{m.duration_sec && m.speaking_sec ? ' / ' : ''}{m.speaking_sec ? `${m.speaking_sec}s` : ''})
                       </span>
                     )}
                   </li>
@@ -146,18 +161,18 @@ export default function DisplayPage() {
             </div>
           )}
           <div className="flex-1 rounded-3xl border border-stage-line bg-stage-raised p-5">
-            <div className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-slate-400">Speakers’ list</div>
+            <div className="mb-3 text-sm font-bold uppercase tracking-[0.2em] text-slate-400">{t('Speakers’ list')}</div>
             {queue.length === 0 ? (
-              <div className="text-lg text-slate-500">No speakers on the list</div>
+              <div className="text-lg text-slate-500">{t('No speakers on the list')}</div>
             ) : (
               <ol className="space-y-2">
                 {queue.slice(0, 8).map((e, i) => (
                   <li key={e.id} className="flex items-center gap-3 text-2xl">
                     <span className="w-8 text-right font-mono text-slate-500">{i + 1}</span>
-                    <span className={i === 0 ? 'font-bold text-white' : 'text-slate-200'}>{byId.get(e.delegate_id)?.country}</span>
+                    <span className={`inline-flex items-center gap-3 ${i === 0 ? 'font-bold text-white' : 'text-slate-200'}`}><Flag country={byId.get(e.delegate_id)?.country || ''} flag={byId.get(e.delegate_id)?.flag} className="!text-xl" />{byId.get(e.delegate_id)?.country}</span>
                   </li>
                 ))}
-                {queue.length > 8 && <li className="pl-11 text-slate-500">+ {queue.length - 8} more</li>}
+                {queue.length > 8 && <li className="pl-11 text-slate-500">{t('+ {n} more', { n: queue.length - 8 })}</li>}
               </ol>
             )}
           </div>
@@ -167,9 +182,9 @@ export default function DisplayPage() {
       {/* Footer */}
       <footer className="flex items-center gap-6 overflow-hidden border-t border-stage-line px-8 py-3 text-sm text-slate-300">
         <div className="shrink-0">
-          Present <b className="text-white">{present}</b>/{delegates.length}
+          {t('Present')} <b className="text-white">{present}</b>/{delegates.length}
           <span className={`ml-3 ${present >= quorum && delegates.length > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
-            Quorum {present >= quorum && delegates.length > 0 ? 'met' : 'not met'}
+            {t('Quorum')} {present >= quorum && delegates.length > 0 ? t('met') : t('not met')}
           </span>
         </div>
         <div className="relative min-w-0 flex-1 overflow-hidden whitespace-nowrap">
@@ -183,23 +198,24 @@ export default function DisplayPage() {
             </div>
           )}
         </div>
-        <div className="shrink-0 text-slate-500">Press F for fullscreen</div>
+        <div className="shrink-0 text-slate-500">{t('Press F for fullscreen')}</div>
       </footer>
     </div>
   );
 }
 
 function VotePanel({ vote, records }: { vote: VoteRow; records: VoteRecord[] }) {
+  const tr = useT();
   const t = tally(records.filter((r) => r.vote_id === vote.id));
   return (
     <div className="w-full">
-      <div className="text-lg font-semibold uppercase tracking-[0.25em] text-accent">Voting procedure · {vote.kind}{vote.label ? ` · ${vote.label}` : ''}</div>
+      <div className="text-lg font-semibold uppercase tracking-[0.25em] text-accent">{tr('Voting procedure')} · {tr(vote.kind)}{vote.label ? ` · ${vote.label}` : ''}</div>
       <div className="mt-2 text-5xl font-black leading-tight">{vote.title}</div>
-      <div className="mt-1 text-xl text-slate-400">{THRESHOLD_LABEL[vote.threshold]} required</div>
+      <div className="mt-1 text-xl text-slate-400">{tr('{what} required', { what: tr(THRESHOLD_LABEL[vote.threshold]) })}</div>
       <div className={`mt-10 grid gap-6 ${vote.kind === 'substantive' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        <Big label="In favor" n={t.for} tone="text-emerald-400" />
-        <Big label="Against" n={t.against} tone="text-red-400" />
-        {vote.kind === 'substantive' && <Big label="Abstention" n={t.abstain} tone="text-slate-300" />}
+        <Big label={tr('In favor')} n={t.for} tone="text-emerald-400" />
+        <Big label={tr('Against')} n={t.against} tone="text-red-400" />
+        {vote.kind === 'substantive' && <Big label={tr('Abstention')} n={t.abstain} tone="text-slate-300" />}
       </div>
     </div>
   );
@@ -215,10 +231,11 @@ function Big({ label, n, tone }: { label: string; n: number; tone: string }) {
 }
 
 function ResultBanner({ vote }: { vote: VoteRow }) {
+  const tr = useT();
   const passed = vote.result === 'passed' || (vote.result == null && voteOutcome({ for: vote.final_for || 0, against: vote.final_against || 0 }, vote.threshold) === 'passed');
   return (
     <div className={`mt-8 rounded-2xl px-8 py-4 text-2xl font-bold ${passed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
-      {vote.label ? `${vote.label} · ` : ''}{vote.title}: {passed ? 'PASSED' : 'FAILED'} ({vote.final_for} in favor, {vote.final_against} against{vote.kind === 'substantive' ? `, ${vote.final_abstain} abstention${vote.final_abstain === 1 ? '' : 's'}` : ''})
+      {vote.label ? `${vote.label} · ` : ''}{vote.title}: {passed ? tr('PASSED') : tr('FAILED')} ({tr('{n} in favor', { n: vote.final_for ?? 0 })}, {tr('{n} against', { n: vote.final_against ?? 0 })}{vote.kind === 'substantive' ? `, ${tr(vote.final_abstain === 1 ? '{n} abstention' : '{n} abstentions', { n: vote.final_abstain ?? 0 })}` : ''})
     </div>
   );
 }

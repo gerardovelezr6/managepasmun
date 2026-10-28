@@ -44,7 +44,7 @@ export function ParticipationOverview() {
         const ss = sessions.filter((x) => x.committee_id === c.id);
         const es = entries.filter((x) => x.committee_id === c.id);
         const rs = records.filter((x) => x.committee_id === c.id);
-        return { c, sessions: ss.length, graded: es.length, warns: warnings.filter((w) => w.committee_id === c.id).length, standings: computeStandings(ds, ss, es, rs, explanationPoints) };
+        return { c, sessions: ss.length, graded: es.length, warns: warnings.filter((w) => w.committee_id === c.id && w.kind !== 'call_of_attention').length, calls: warnings.filter((w) => w.committee_id === c.id && w.kind === 'call_of_attention').length, standings: computeStandings(ds, ss, es, rs, explanationPoints) };
       }),
     [committees, delegates, sessions, entries, records, warnings, explanationPoints]
   );
@@ -108,13 +108,13 @@ export function ParticipationOverview() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {perCommittee.map(({ c, sessions: n, graded, warns, standings }) => (
+        {perCommittee.map(({ c, sessions: n, graded, warns, calls, standings }) => (
           <div key={c.id} className="card">
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-bold uppercase tracking-wider text-brand">{c.abbreviation}</div>
                 <div className="truncate font-bold">{c.name}</div>
-                <div className="text-xs text-slate-500">{n} session{n === 1 ? '' : 's'} · {graded} scores · {warns} warning{warns === 1 ? '' : 's'}</div>
+                <div className="text-xs text-slate-500">{n} session{n === 1 ? '' : 's'} · {graded} scores · {warns} warning{warns === 1 ? '' : 's'} · {calls} call{calls === 1 ? '' : 's'} of attention</div>
               </div>
               <button className="btn btn-secondary btn-sm" onClick={() => exportOne(c)} disabled={busy !== null}>{busy === c.id ? '…' : 'Export .xlsx'}</button>
             </div>

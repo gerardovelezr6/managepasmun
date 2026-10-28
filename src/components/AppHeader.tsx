@@ -3,11 +3,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { BrandMark, useSettings } from './BrandProvider';
+import { useT } from '@/lib/i18n';
 
 export function AppHeader() {
   const { profile, session, isHC, signOut } = useAuth();
   const { settings } = useSettings();
   const router = useRouter();
+  const t = useT();
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-2.5">
@@ -19,9 +21,9 @@ export function AppHeader() {
           </div>
         </Link>
         <nav className="ml-auto flex items-center gap-1 text-sm">
-          <Link href="/" className="btn btn-ghost btn-sm">Committees</Link>
-          {session && <Link href="/dashboard" className="btn btn-ghost btn-sm">Dashboard</Link>}
-          {isHC && <Link href="/admin" className="btn btn-ghost btn-sm">High Command</Link>}
+          <Link href="/" className="btn btn-ghost btn-sm">{t('Committees')}</Link>
+          {session && <Link href="/dashboard" className="btn btn-ghost btn-sm">{t('Dashboard')}</Link>}
+          {isHC && <Link href="/admin" className="btn btn-ghost btn-sm">{t('High Command')}</Link>}
           {session ? (
             <>
               <span className="hidden px-2 text-xs text-slate-500 sm:inline">{profile?.full_name || profile?.email}</span>
@@ -32,11 +34,11 @@ export function AppHeader() {
                   router.push('/login');
                 }}
               >
-                Sign out
+                {t('Sign out')}
               </button>
             </>
           ) : (
-            <Link href="/login" className="btn btn-primary btn-sm">Chair / HC login</Link>
+            <Link href="/login" className="btn btn-primary btn-sm">{t('Chair / HC login')}</Link>
           )}
         </nav>
       </div>

@@ -3,6 +3,7 @@
 import { supabase } from './supabase';
 import { AWARD_TYPES, GRADING_CATEGORIES } from './config';
 import { computeStandings } from './grading';
+import { rubricText, translate } from './i18n';
 import {
   AwardRow,
   Committee,
@@ -95,6 +96,21 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
   wb.creator = 'ManagePASMUN';
   wb.created = new Date();
 
+  // Spanish committees get a Spanish workbook (sheet names, headings, rubric wording).
+  const lang = d.committee.language === 'es' ? 'es' : 'en';
+  const t = (s: string, v?: Record<string, string | number>) => translate(lang, s, v);
+  const N = {
+    basic: t('Basic info'),
+    part: t('Participations'),
+    wp: t('Voting Process WP'),
+    rp: t('Voting Process RP'),
+    rubric: t('Grading Log Rubric'),
+  };
+  const labelOf = (e: ParticipationEntry) => {
+    const lv = d.rubric.find((l) => l.category === e.category && l.level_key === e.level_key);
+    return lv ? rubricText(lang, lv).label : e.label || '';
+  };
+
   const delegates = d.delegates;
   const sessions = d.sessions;
   const standings = computeStandings(delegates, sessions, d.entries, d.records, d.explanationPoints);
@@ -119,14 +135,14 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
     ws.getCell('A1').font = { bold: true, size: 14 };
     const fixed = 2;
     ws.getCell(3, 1).value = '#';
-    ws.getCell(3, 2).value = 'Delegation';
+    ws.getCell(3, 2).value = t('Delegation');
     ws.mergeCells(3, 1, 4, 1);
     ws.mergeCells(3, 2, 4, 2);
     votes.forEach((v, i) => {
       const c0 = fixed + 1 + i * 4;
       ws.mergeCells(3, c0, 3, c0 + 3);
       ws.getCell(3, c0).value = `${v.label ? v.label + ' · ' : ''}${v.title}${v.result ? ` (${v.result})` : ''}`;
-      ['In favor', 'Against', 'Abstention', 'Explanation'].forEach((h, k) => {
+      [t('In favor'), t('Against'), t('Abstention'), t('Explanation')].forEach((h, k) => {
         ws.getCell(4, c0 + k).value = h;
       });
     });
@@ -134,7 +150,7 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
     if (withPoints) {
       pointsCol = fixed + votes.length * 4 + 1;
       ws.mergeCells(3, pointsCol, 4, pointsCol);
-      ws.getCell(3, pointsCol).value = 'Points for right of explanation';
+      ws.getCell(3, pointsCol).value = t('Points for right of explanation');
     }
     for (const r of [3, 4]) for (let c = 1; c <= (pointsCol || fixed + votes.length * 4); c++) headStyle(ws.getCell(r, c));
     delegates.forEach((dl, idx) => {
@@ -147,7 +163,7 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
         ws.getCell(row, c0).value = rec?.choice === 'for';
         ws.getCell(row, c0 + 1).value = rec?.choice === 'against';
         ws.getCell(row, c0 + 2).value = rec?.choice === 'abstain';
-        ws.getCell(row, c0 + 3).value = rec?.explanation && rec.choice !== 'abstain' ? (rec.explanation === 'given' ? 'given' : 'requested') : '';
+        ws.getCell(row, c0 + 3).value = rec?.explanation && rec.choice !== 'abstain' ? (rec.explanation === 'given' ? t('given') : t('requested')) : '';
       });
     });
     ws.getColumn(2).width = 30;
@@ -157,8 +173,8 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
   }
 
   // Explanation points are computed over every vote so nothing is lost if a paper is untagged.
-  votingSheet('Voting Process WP', 'Working Paper voting', wpVotes, false);
-  const rp = votingSheet('Voting Process RP', 'Resolution Paper voting', rpVotes, true);
+  votingSheet(N.wp, t('Working Paper voting'), wpVotes, false);
+  const rp = votingSheet(N.rp, t('Resolution Paper voting'), rpVotes, true);
   const pointsCol = rp.pointsCol;
   const expPoints = new Map<string, number>();
   for (const r of d.records) {
@@ -169,26 +185,26 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
   });
 
   // ───────── Participations ─────────
-  const pt = wb.addWorksheet('Participations', { properties: { tabColor: { argb: 'FF1E40AF' } } });
-  pt.getCell('A1').value = `Participations · ${d.committee.name} · ${d.conference}`;
+  const pt = wb.addWorksheet(N.part, { properties: { tabColor: { argb: 'FF1E40AF' } } });
+  pt.getCell('A1').value = `${N.part} · ${d.committee.name} · ${d.conference}`;
   pt.getCell('A1').font = { bold: true, size: 14 };
   pt.getCell(3, 1).value = '#';
-  pt.getCell(3, 2).value = 'Delegation';
+  pt.getCell(3, 2).value = t('Delegation');
   pt.mergeCells(3, 1, 4, 1);
   pt.mergeCells(3, 2, 4, 2);
   sessions.forEach((s, i) => {
     const c0 = 3 + i * 2;
     pt.mergeCells(3, c0, 3, c0 + 1);
-    pt.getCell(3, c0).value = `Session ${s.number}`;
-    pt.getCell(4, c0).value = 'Log (score//rubric text, then notes)';
+    pt.getCell(3, c0).value = t('Session {n}', { n: s.number });
+    pt.getCell(4, c0).value = t('Log (score//rubric text, then notes)');
     pt.getCell(4, c0 + 1).value = 'P';
   });
   const expCol = 3 + sessions.length * 2;
   const totalCol = expCol + 1;
   pt.mergeCells(3, expCol, 4, expCol);
-  pt.getCell(3, expCol).value = 'Right of explanation';
+  pt.getCell(3, expCol).value = t('Right of explanation');
   pt.mergeCells(3, totalCol, 4, totalCol);
-  pt.getCell(3, totalCol).value = 'Points';
+  pt.getCell(3, totalCol).value = t('Points');
   for (const r of [3, 4]) for (let c = 1; c <= totalCol; c++) headStyle(pt.getCell(r, c));
 
   delegates.forEach((dl, idx) => {
@@ -202,8 +218,8 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
       const mine = d.entries.filter((e) => e.session_id === s.id && e.delegate_id === dl.id);
       const note = d.notes.find((n) => n.session_id === s.id && n.delegate_id === dl.id)?.note?.trim() || '';
       const warns = d.warnings.filter((w) => w.session_id === s.id && w.delegate_id === dl.id);
-      const lines = mine.map((e) => `${GRADING_CATEGORIES.find((c) => c.value === e.category)?.short || e.category} ${e.level_key}//${e.label || ''}`);
-      const tail = [...warns.map((w) => `- Warning: ${w.reason}`), ...(note ? [note] : [])];
+      const lines = mine.map((e) => `${GRADING_CATEGORIES.find((c) => c.value === e.category)?.short || e.category} ${e.level_key}//${labelOf(e)}`);
+      const tail = [...warns.map((w) => `- ${w.kind === 'call_of_attention' ? t('Call of attention') : t('Warning')}: ${w.reason}`), ...(note ? [note] : [])];
       const text = [...lines, ...(tail.length ? ['---', ...tail] : [])].join('\n');
       const sum = mine.reduce((a, e) => a + Number(e.score), 0);
       total += sum;
@@ -214,7 +230,7 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
       pCells.push(`${colLetter(c0 + 1)}${row}`);
     });
     const exp = expPoints.get(dl.id) || 0;
-    pt.getCell(row, expCol).value = { formula: `'Voting Process RP'!${colLetter(pointsCol)}${5 + idx}`, result: exp };
+    pt.getCell(row, expCol).value = { formula: `'${N.rp}'!${colLetter(pointsCol)}${5 + idx}`, result: exp };
     pt.getCell(row, totalCol).value = { formula: `${pCells.length ? pCells.join('+') + '+' : ''}${colLetter(expCol)}${row}`, result: total + exp };
     pt.getCell(row, totalCol).font = { bold: true };
     pt.getRow(row).alignment = { vertical: 'top' };
@@ -230,19 +246,20 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
   pt.views = [{ state: 'frozen', xSplit: 2, ySplit: 4 }];
 
   // ───────── Basic info ─────────
-  const bi = wb.addWorksheet('Basic info', { properties: { tabColor: { argb: 'FF16A34A' } } });
-  bi.getCell('A1').value = `Committee: ${d.committee.name}`;
+  const bi = wb.addWorksheet(N.basic, { properties: { tabColor: { argb: 'FF16A34A' } } });
+  bi.getCell('A1').value = `${t('Committee')}: ${d.committee.name}`;
   bi.getCell('A1').font = { bold: true, size: 14 };
   bi.getCell('A2').value = d.conference;
   bi.getCell(4, 1).value = '#';
-  bi.getCell(4, 2).value = 'Delegation';
-  sessions.forEach((s, i) => (bi.getCell(4, 3 + i).value = `Session ${s.number}`));
+  bi.getCell(4, 2).value = t('Delegation');
+  sessions.forEach((s, i) => (bi.getCell(4, 3 + i).value = t('Session {n}', { n: s.number })));
   const wCol = 3 + sessions.length;
-  bi.getCell(4, wCol).value = 'Warnings';
-  bi.getCell(4, wCol + 1).value = 'Notes';
-  bi.getCell(4, wCol + 2).value = 'Points';
-  bi.getCell(4, wCol + 3).value = 'Rank';
-  for (let c = 1; c <= wCol + 3; c++) headStyle(bi.getCell(4, c));
+  bi.getCell(4, wCol).value = t('Warnings');
+  bi.getCell(4, wCol + 1).value = t('Calls of attention');
+  bi.getCell(4, wCol + 2).value = t('Notes');
+  bi.getCell(4, wCol + 3).value = t('Points');
+  bi.getCell(4, wCol + 4).value = t('Rank');
+  for (let c = 1; c <= wCol + 4; c++) headStyle(bi.getCell(4, c));
   const rankBy = new Map(standings.map((s, i) => [s.delegate.id, i + 1]));
   delegates.forEach((dl, idx) => {
     const row = 5 + idx;
@@ -252,48 +269,55 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
       const a = d.attendance.find((x) => x.session_id === s.id && x.delegate_id === dl.id);
       const cell = bi.getCell(row, 3 + i);
       const missed = !a || a.attendance === 'absent';
-      cell.value = missed ? 'Missed' : a!.late ? 'Late' : 'On time';
+      cell.value = missed ? t('Missed') : a!.late ? t('Late') : t('On time');
       cell.alignment = { horizontal: 'center' };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: missed ? FILL.red : a!.late ? FILL.amber : FILL.green } };
     });
-    const ws_ = d.warnings.filter((w) => w.delegate_id === dl.id);
+    const mine = d.warnings.filter((w) => w.delegate_id === dl.id);
+    const ws_ = mine.filter((w) => w.kind !== 'call_of_attention');
+    const cs_ = mine.filter((w) => w.kind === 'call_of_attention');
     bi.getCell(row, wCol).value = ws_.length;
-    bi.getCell(row, wCol + 1).value = ws_.map((w) => w.reason).filter(Boolean).join('; ');
-    bi.getCell(row, wCol + 2).value = { formula: `Participations!${colLetter(totalCol)}${row}`, result: standingBy.get(dl.id)?.total || 0 };
-    bi.getCell(row, wCol + 3).value = rankBy.get(dl.id) || '';
+    bi.getCell(row, wCol + 1).value = cs_.length;
+    bi.getCell(row, wCol + 2).value = mine
+      .filter((w) => w.reason)
+      .map((w) => `${w.kind === 'call_of_attention' ? t('Call of attention') : t('Warning')}: ${w.reason}`)
+      .join('; ');
+    bi.getCell(row, wCol + 3).value = { formula: `'${N.part}'!${colLetter(totalCol)}${row}`, result: standingBy.get(dl.id)?.total || 0 };
+    bi.getCell(row, wCol + 4).value = rankBy.get(dl.id) || '';
   });
   // Key + winners
-  const kc = wCol + 5;
-  bi.getCell(4, kc).value = 'Key';
+  const kc = wCol + 6;
+  bi.getCell(4, kc).value = t('Key');
   headStyle(bi.getCell(4, kc));
-  [['On time', FILL.green], ['Late', FILL.amber], ['Missed', FILL.red]].forEach(([t, argb], i) => {
+  [[t('On time'), FILL.green], [t('Late'), FILL.amber], [t('Missed'), FILL.red]].forEach(([txt, argb], i) => {
     const c = bi.getCell(5 + i, kc);
-    c.value = t;
+    c.value = txt;
     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb } };
   });
-  bi.getCell(9, kc).value = 'Winners';
+  bi.getCell(9, kc).value = t('Winners');
   headStyle(bi.getCell(9, kc));
   AWARD_TYPES.forEach((a, i) => {
     const w = d.awards.find((x) => x.award === a.value);
     const dl = w ? delegates.find((x) => x.id === w.delegate_id) : null;
-    bi.getCell(10 + i, kc).value = `${a.label}: ${dl ? dl.country : ''}`;
+    bi.getCell(10 + i, kc).value = `${t(a.label)}: ${dl ? dl.country : ''}`;
   });
   bi.getColumn(2).width = 30;
-  bi.getColumn(wCol + 1).width = 50;
+  bi.getColumn(wCol + 1).width = 12;
+  bi.getColumn(wCol + 2).width = 50;
   bi.getColumn(kc).width = 44;
   for (let i = 0; i < sessions.length; i++) bi.getColumn(3 + i).width = 12;
   bi.views = [{ state: 'frozen', xSplit: 2, ySplit: 4 }];
 
   // ───────── Rubric ─────────
-  const rb = wb.addWorksheet('Grading Log Rubric');
-  rb.getCell('A1').value = 'Grading Log Rubric';
+  const rb = wb.addWorksheet(N.rubric);
+  rb.getCell('A1').value = N.rubric;
   rb.getCell('A1').font = { bold: true, size: 14 };
   GRADING_CATEGORIES.forEach((cat, i) => {
     const c0 = 1 + i * 3;
-    rb.getCell(3, c0).value = cat.label;
+    rb.getCell(3, c0).value = t(cat.label);
     rb.mergeCells(3, c0, 3, c0 + 1);
-    rb.getCell(4, c0).value = 'Points';
-    rb.getCell(4, c0 + 1).value = 'Description';
+    rb.getCell(4, c0).value = t('Points');
+    rb.getCell(4, c0 + 1).value = t('Description');
     headStyle(rb.getCell(3, c0));
     headStyle(rb.getCell(3, c0 + 1));
     headStyle(rb.getCell(4, c0));
@@ -304,7 +328,7 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
       .forEach((l, k) => {
         rb.getCell(5 + k, c0).value = l.level_key;
         const dc = rb.getCell(5 + k, c0 + 1);
-        dc.value = l.description || l.label;
+        dc.value = rubricText(lang, l).description || rubricText(lang, l).label;
         dc.alignment = { wrapText: true, vertical: 'top' };
       });
     rb.getColumn(c0).width = 8;
@@ -312,7 +336,7 @@ export async function buildWorkbook(d: LogData): Promise<ArrayBuffer> {
   });
 
   // Order tabs like the original workbook.
-  const order = ['Basic info', 'Participations', 'Voting Process WP', 'Voting Process RP', 'Grading Log Rubric'];
+  const order = [N.basic, N.part, N.wp, N.rp, N.rubric];
   order.forEach((name, i) => {
     const sheet = wb.getWorksheet(name);
     if (sheet) sheet.orderNo = i;
@@ -336,5 +360,5 @@ export async function exportCommitteeLog(committeeId: string) {
   const data = await fetchLogData(committeeId);
   const buf = await buildWorkbook(data);
   const safe = (data.committee.abbreviation || data.committee.name).replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-  downloadXlsx(buf, `grading-log-${safe}.xlsx`);
+  downloadXlsx(buf, `${data.committee.language === 'es' ? 'registro-de-calificaciones' : 'grading-log'}-${safe}.xlsx`);
 }

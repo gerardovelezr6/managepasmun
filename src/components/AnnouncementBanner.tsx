@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useLiveReload, useTick } from '@/lib/hooks';
 import { Announcement } from '@/lib/types';
+import { useT } from '@/lib/i18n';
 
 export function useActiveAnnouncements() {
   const [items, setItems] = useState<Announcement[]>([]);
@@ -16,6 +17,7 @@ export function useActiveAnnouncements() {
 }
 
 export function AnnouncementBanner({ max = 3 }: { max?: number }) {
+  const t = useT();
   const items = useActiveAnnouncements().slice(0, max);
   if (!items.length) return null;
   return (
@@ -27,7 +29,7 @@ export function AnnouncementBanner({ max = 3 }: { max?: number }) {
             a.severity === 'urgent' ? 'border-red-300 bg-red-50 text-red-900' : 'border-amber-200 bg-amber-50 text-amber-900'
           }`}
         >
-          <span className="mt-0.5 text-xs font-bold uppercase tracking-wide">{a.severity === 'urgent' ? 'Urgent' : 'Announcement'}</span>
+          <span className="mt-0.5 text-xs font-bold uppercase tracking-wide">{a.severity === 'urgent' ? t('Urgent') : t('Announcement')}</span>
           <span className="flex-1">{a.message}</span>
         </div>
       ))}

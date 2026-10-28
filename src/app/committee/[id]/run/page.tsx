@@ -16,12 +16,14 @@ import { Voting } from '@/components/chair/Voting';
 import { Participation } from '@/components/chair/Participation';
 import { GradingLog } from '@/components/chair/GradingLog';
 import { MODE_LABEL } from '@/lib/config';
+import { LangProvider, useT } from '@/lib/i18n';
 import { useClockSync, useCommittee, useCommitteeState, useRows } from '@/lib/hooks';
 import { closeSession, openSession } from '@/lib/session';
 import { Delegate, EventRow, SessionRow } from '@/lib/types';
 
 function Console({ id }: { id: string }) {
   const { canRun } = useAuth();
+  const t = useT();
   const { committee, missing } = useCommittee(id);
   const { state, update, refresh } = useCommitteeState(id);
   const { rows: sessions } = useRows<SessionRow>('sessions', id, 'number');
@@ -30,14 +32,14 @@ function Console({ id }: { id: string }) {
   const [tab, setTab] = useLocalState<string>(`mp-tab-${id}`, 'roll');
   useClockSync();
 
-  if (missing) return <div className="mx-auto mt-16 max-w-md card text-center">Committee not found.</div>;
-  if (!committee || !state) return <Spinner label="Loading committee…" />;
+  if (missing) return <div className="mx-auto mt-16 max-w-md card text-center">{t('Committee not found.')}</div>;
+  if (!committee || !state) return <Spinner label={t('Loading committee…')} />;
   if (!canRun(id)) {
     return (
       <div className="mx-auto mt-16 max-w-md card text-center">
-        <h2 className="text-lg font-bold">Not your committee</h2>
-        <p className="mt-2 text-sm text-slate-600">You are not assigned as a chair of {committee.name}.</p>
-        <Link href="/dashboard" className="btn btn-primary mt-4">Back to dashboard</Link>
+        <h2 className="text-lg font-bold">{t('Not your committee')}</h2>
+        <p className="mt-2 text-sm text-slate-600">{t('You are not assigned as a chair of {name}.', { name: committee.name })}</p>
+        <Link href="/dashboard" className="btn btn-primary mt-4">{t('Back to dashboard')}</Link>
       </div>
     );
   }
@@ -66,29 +68,29 @@ function Console({ id }: { id: string }) {
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
             <StatusBadge status={state.status} />
-            {currentSession && <span className="badge bg-brand/10 text-brand">Session {currentSession.number}</span>}
-            {state.status === 'in_session' && <span className="badge bg-slate-100 text-slate-700">{MODE_LABEL[state.mode]}</span>}
+            {currentSession && <span className="badge bg-brand/10 text-brand">{t('Session {n}', { n: currentSession.number })}</span>}
+            {state.status === 'in_session' && <span className="badge bg-slate-100 text-slate-700">{t(MODE_LABEL[state.mode])}</span>}
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             {state.status !== 'in_session' && state.status !== 'adjourned' && (
               <button className="btn btn-sm bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setStatus('in_session')}>
-                {state.status === 'suspended' ? 'Resume session' : 'Call to order'}
+                {state.status === 'suspended' ? t('Resume session') : t('Call to order')}
               </button>
             )}
-            {state.status === 'in_session' && <button className="btn btn-sm bg-amber-500 text-black hover:bg-amber-400" onClick={() => setStatus('suspended')}>Suspend</button>}
-            {state.status === 'adjourned' && <button className="btn btn-secondary btn-sm" onClick={() => setStatus('in_session')}>Reopen</button>}
+            {state.status === 'in_session' && <button className="btn btn-sm bg-amber-500 text-black hover:bg-amber-400" onClick={() => setStatus('suspended')}>{t('Suspend')}</button>}
+            {state.status === 'adjourned' && <button className="btn btn-secondary btn-sm" onClick={() => setStatus('in_session')}>{t('Reopen')}</button>}
             {state.status !== 'adjourned' && (
-              <button className="btn btn-secondary btn-sm" onClick={() => window.confirm('Adjourn this committee?') && setStatus('adjourned')}>Adjourn</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => window.confirm(t('Adjourn this committee?')) && setStatus('adjourned')}>{t('Adjourn')}</button>
             )}
-            <Link href={`/committee/${id}/display`} target="_blank" className="btn btn-primary btn-sm">Open projection screen ↗</Link>
+            <Link href={`/committee/${id}/display`} target="_blank" className="btn btn-primary btn-sm">{t('Open projection screen')} ↗</Link>
           </div>
         </div>
       </div>
 
       {state.status === 'in_session' && !currentSession && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span className="flex-1">This committee is in session but has no session record yet, so roll call history and grading are not being saved.</span>
-          <button className="btn btn-sm bg-amber-500 text-black hover:bg-amber-400" onClick={async () => { await openSession(id); refresh(); }}>Start Session {nextSessionNumber} now</button>
+          <span className="flex-1">{t('This committee is in session but has no session record yet, so roll call history and grading are not being saved.')}</span>
+          <button className="btn btn-sm bg-amber-500 text-black hover:bg-amber-400" onClick={async () => { await openSession(id); refresh(); }}>{t('Start Session {n} now', { n: nextSessionNumber })}</button>
         </div>
       )}
 
@@ -98,14 +100,14 @@ function Console({ id }: { id: string }) {
         value={tab}
         onChange={setTab}
         tabs={[
-          { id: 'roll', label: `Roll call (${present}/${delegates.length})` },
-          { id: 'floor', label: 'Speakers & timer' },
-          { id: 'caucus', label: 'Caucus' },
-          { id: 'motions', label: 'Points & motions', count: pendingMotions },
-          { id: 'voting', label: 'Voting' },
-          { id: 'participation', label: 'Participation' },
-          { id: 'log', label: 'Grading log' },
-          { id: 'docs', label: 'Documents' },
+          { id: 'roll', label: `${t('Roll call')} (${present}/${delegates.length})` },
+          { id: 'floor', label: t('Speakers & timer') },
+          { id: 'caucus', label: t('Caucus') },
+          { id: 'motions', label: t('Points & motions'), count: pendingMotions },
+          { id: 'voting', label: t('Voting') },
+          { id: 'participation', label: t('Participation') },
+          { id: 'log', label: t('Grading log') },
+          { id: 'docs', label: t('Documents') },
         ]}
       />
 
@@ -125,12 +127,14 @@ function Console({ id }: { id: string }) {
 
 export default function RunPage() {
   const params = useParams<{ id: string }>();
+  const { committee } = useCommittee(params.id);
+  // Spanish committees translate the whole screen, header included.
   return (
-    <>
+    <LangProvider lang={committee?.language}>
       <AppHeader />
       <RequireAuth>
         <Console id={params.id} />
       </RequireAuth>
-    </>
+    </LangProvider>
   );
 }

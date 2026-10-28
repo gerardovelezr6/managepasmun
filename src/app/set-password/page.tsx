@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { BrandMark, useSettings } from '@/components/BrandProvider';
 
@@ -11,6 +12,8 @@ export default function SetPasswordPage() {
   const { settings } = useSettings();
   const [state, setState] = useState<'checking' | 'ready' | 'invalid'>('checking');
   const [problem, setProblem] = useState('');
+  // Set only for a brand-new invitation (never for a forgotten-password link): the person's name for the greeting.
+  const [welcome, setWelcome] = useState<string | null>(null);
   const [pw, setPw] = useState('');
   const [pw2, setPw2] = useState('');
   const [error, setError] = useState('');
@@ -25,13 +28,19 @@ export default function SetPasswordPage() {
       setState('invalid');
       return;
     }
+    const ready = (s: Session) => {
+      const meta = s.user.user_metadata || {};
+      if (meta.invited_at && !meta.password_set_at) setWelcome(String(meta.full_name || '').trim() || '');
+      setState('ready');
+    };
     const { data: sub } = sb.auth.onAuthStateChange((event, s) => {
-      if (s && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) setState('ready');
+      if (s && (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN')) ready(s);
     });
     // The token may already have been processed before this listener attached.
     const t = setTimeout(async () => {
       const { data } = await sb.auth.getSession();
-      setState((cur) => (cur === 'ready' ? cur : data.session ? 'ready' : 'invalid'));
+      if (data.session) ready(data.session);
+      else setState((cur) => (cur === 'ready' ? cur : 'invalid'));
     }, 1500);
     return () => {
       sub.subscription.unsubscribe();
@@ -59,8 +68,10 @@ export default function SetPasswordPage() {
       <div className="w-full max-w-sm card p-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <BrandMark size={52} />
-          <h1 className="mt-4 text-xl font-bold">Set your password</h1>
-          <p className="mt-1 text-sm text-slate-500">{settings.conference_name}</p>
+          <h1 className="mt-4 text-xl font-bold">{welcome !== null ? (welcome ? `Welcome, ${welcome}!` : 'Welcome!') : 'Set your password'}</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {welcome !== null ? `You have been invited to ${settings.conference_name}. Choose a password to finish setting up your account.` : settings.conference_name}
+          </p>
         </div>
 
         {state === 'checking' && <p className="text-center text-sm text-slate-500">Checking your link…</p>}
@@ -68,7 +79,7 @@ export default function SetPasswordPage() {
         {state === 'invalid' && (
           <div className="space-y-3 text-sm">
             <p className="rounded-lg bg-amber-50 p-3 text-amber-800">{problem || 'This link has expired or was already used.'}</p>
-            <p className="text-slate-600">Ask High Command to send you a new set-password email.</p>
+            <p className="text-slate-600">Ask High Command for a new link.</p>
             <a href="/login" className="btn btn-secondary w-full">Go to login</a>
           </div>
         )}

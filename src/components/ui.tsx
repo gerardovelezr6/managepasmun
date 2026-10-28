@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { SESSION_STATUS_LABEL } from '@/lib/config';
+import { useT } from '@/lib/i18n';
 
 const STATUS_TONE: Record<string, string> = {
   not_started: 'bg-slate-100 text-slate-600',
@@ -10,11 +11,12 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export function StatusBadge({ status }: { status?: string | null }) {
+  const t = useT();
   const s = status || 'not_started';
   return (
     <span className={`badge ${STATUS_TONE[s] || STATUS_TONE.not_started}`}>
       {s === 'in_session' && <span className="mr-1.5 h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />}
-      {SESSION_STATUS_LABEL[s] || s}
+      {t(SESSION_STATUS_LABEL[s] || s)}
     </span>
   );
 }
