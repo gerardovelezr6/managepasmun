@@ -6,14 +6,19 @@ import { APP_CONFIG } from '@/lib/config';
 import { toast, toastError } from '@/lib/toast';
 import { Absence, Attendance, CommitteeState, Delegate, SessionAttendance, SessionRow } from '@/lib/types';
 import { LOCALE, useLang, useT } from '@/lib/i18n';
-import { flagFor, flagOptions } from '@/lib/countries';
-import { Flag } from '../Flag';
+import { flagOptions, resolveFlag } from '@/lib/countries';
+import { useCommitteeType } from '@/lib/committeeContext';
+import { matchGroup, nameIn } from '@/lib/catalog';
+import { Flag, GroupBadge } from '../Flag';
 import { Empty, Seg, Spinner } from '../ui';
 
 
 export function RollCall({ committeeId, state }: { committeeId: string; state: CommitteeState }) {
   const t = useT();
   const lang = useLang();
+  const type = useCommitteeType();
+  const mainLabel = (lang === 'es' && type.label_field_es) || type.label_field;
+  const groupLabel = (lang === 'es' && type.group_label_es) || type.group_label || '';
   const hhmm = (iso: string) => new Date(iso).toLocaleTimeString(LOCALE[lang], { hour: 'numeric', minute: '2-digit' });
   const { rows: delegates, loading } = useRows<Delegate>('delegates', committeeId, 'country');
   const { rows: sessions } = useRows<SessionRow>('sessions', committeeId, 'number');
@@ -73,20 +78,35 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
     if (error) toastError(error);
   }
   async function addBulk() {
-    // One delegate per line: "Country, Delegate Name" (name optional)
+    // One delegate per line, columns in the order this committee type uses (e.g. "Country, Name" or "Side, Name, Country").
+    // Names may contain commas only in the last column; the extra text stays with it.
+    const cols = type.bulk;
+    const bad: string[] = [];
     const rows = bulk
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean)
       .map((l) => {
-        const [country, ...rest] = l.split(',');
-        return { committee_id: committeeId, country: country.trim(), name: rest.join(',').trim() };
-      });
+        const parts = l.split(',').map((x) => x.trim());
+        const head = parts.slice(0, cols.length - 1);
+        const last = parts.slice(cols.length - 1).join(', ');
+        const cells = [...head, last];
+        const get = (c: string) => cells[cols.indexOf(c as any)] || '';
+        const g = cols.includes('group') ? matchGroup(type, get('group')) : null;
+        if (cols.includes('group') && type.group_required && !g) bad.push(l);
+        return { committee_id: committeeId, country: get('country'), name: get('name'), group_key: g?.key ?? null };
+      })
+      .filter((r) => r.country || r.name);
+    if (bad.length) return toastError(new Error(t('Unknown {group} on: {line}', { group: groupLabel.toLowerCase() || 'group', line: bad[0] })));
     if (!rows.length) return;
     const { error } = await supabase().from('delegates').insert(rows);
     if (error) return toastError(error);
     setBulk('');
     toast(t('Added {n} delegate(s)', { n: rows.length }), 'success');
+  }
+  async function setGroup(d: Delegate, group_key: string) {
+    const { error } = await supabase().from('delegates').update({ group_key: group_key || null }).eq('id', d.id);
+    if (error) toastError(error);
   }
   async function remove(d: Delegate) {
     if (!window.confirm(t('Remove {country}?', { country: d.country }))) return;
@@ -97,7 +117,9 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
     const { error } = await supabase().from('delegates').update({ flag: flag || null }).eq('id', d.id);
     if (error) toastError(error);
   }
-  const flags = flagOptions(lang);
+  const flags = flagOptions(lang, type.flag);
+  const colName = (c: string) => (c === 'country' ? mainLabel : c === 'name' ? t('Delegate name') : groupLabel || t('Group'));
+  const bulkExample = type.bulk.map((c) => (c === 'group' ? nameIn(type.groups[0] || { name: 'Group' }, lang) : c === 'country' ? mainLabel : t('Delegate name'))).join(', ');
 
   if (loading) return <Spinner />;
 
@@ -132,10 +154,11 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
 
       {showManage && (
         <div className="card space-y-2">
-          <label className="label">{t('Add delegates (one per line: Country, Delegate Name)')}</label>
-          <textarea className="input h-28 font-mono" value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder={t('Placeholder Country 1, Delegate Name 1\nPlaceholder Country 2, Delegate Name 2')} />
+          <label className="label">{t('Add delegates (one per line)')}: {type.bulk.map(colName).join(', ')}</label>
+          <textarea className="input h-28 font-mono" value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder={`${bulkExample}\n${bulkExample}`} />
+          {type.groups.length > 0 && <p className="text-xs text-slate-500">{groupLabel}: {type.groups.map((g) => nameIn(g, lang)).join(', ')}</p>}
           <button className="btn btn-primary btn-sm" onClick={addBulk} disabled={!bulk.trim()}>{t('Add to roll')}</button>
-          <p className="text-xs text-slate-400">{t('Flags are picked automatically from the country name. Change one with the flag menu next to each delegate below.')}</p>
+          <p className="text-xs text-slate-400">{type.flag === 'none' ? '' : t('Flags are picked automatically from the country name. Change one with the flag menu next to each delegate below.')}</p>
         </div>
       )}
 
@@ -152,6 +175,7 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
                   <div className="flex flex-wrap items-center gap-2">
                     <Flag country={d.country} flag={d.flag} />
                     <span className="truncate font-semibold">{d.country}</span>
+                    <GroupBadge groupKey={d.group_key} />
                     {isPresent && lateBy.get(d.id) && <span className="badge bg-amber-100 text-amber-800">{t('Late')}</span>}
                     {out && <span className="badge bg-red-100 text-red-700">{t('Out since {time}', { time: hhmm(out.left_at) })}</span>}
                     {!out && (stepOuts.get(d.id) || 0) > 0 && <span className="text-xs text-slate-400">{t('stepped out {n}×', { n: stepOuts.get(d.id) || 0 })}</span>}
@@ -179,17 +203,23 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
                 />
                 {showManage && (
                   <>
-                    <select
+                    {type.groups.length > 0 && (
+                      <select className="input w-auto max-w-[9rem] py-1 text-xs" value={d.group_key || ''} onChange={(e) => setGroup(d, e.target.value)} aria-label={groupLabel} title={groupLabel}>
+                        <option value="">{groupLabel || t('Group')}: —</option>
+                        {type.groups.map((g) => <option key={g.key} value={g.key}>{nameIn(g, lang)}</option>)}
+                      </select>
+                    )}
+                    {type.flag !== 'none' && <select
                       className="input w-auto max-w-[9rem] py-1 text-xs"
                       value={d.flag || ''}
                       onChange={(e) => setFlag(d, e.target.value)}
                       aria-label={t('Flag')}
                       title={t('Flag')}
                     >
-                      <option value="">{flagFor(d.country) ? `${t('Automatic')} (${flagFor(d.country)!.toUpperCase()})` : t('Automatic (none found)')}</option>
+                      <option value="">{resolveFlag(type.flag, d.country) ? `${t('Automatic')} (${resolveFlag(type.flag, d.country)!.toUpperCase()})` : t('Automatic (none found)')}</option>
                       <option value="none">{t('No flag')}</option>
                       {flags.map((f) => <option key={f.code} value={f.code}>{f.name}</option>)}
-                    </select>
+                    </select>}
                     <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>{t('Remove')}</button>
                   </>
                 )}

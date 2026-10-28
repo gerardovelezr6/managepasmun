@@ -4,6 +4,7 @@ import { RequireAuth } from '@/components/RequireAuth';
 import { Tabs, useLocalState } from '@/components/ui';
 import { Analytics } from '@/components/admin/Analytics';
 import { Committees } from '@/components/admin/Committees';
+import { CommitteeTypes } from '@/components/admin/CommitteeTypes';
 import { Users } from '@/components/admin/Users';
 import { Onboarding } from '@/components/admin/Onboarding';
 import { Announcements } from '@/components/admin/Announcements';
@@ -27,6 +28,7 @@ function Panel() {
         tabs={[
           { id: 'analytics', label: 'Live analytics' },
           { id: 'committees', label: 'Committees & chairs' },
+          { id: 'types', label: 'Types & categories' },
           { id: 'grades', label: 'Participation & grades' },
           { id: 'rubric', label: 'Grading rubric' },
           { id: 'users', label: 'Users & roles' },
@@ -40,6 +42,7 @@ function Panel() {
       <div className="pt-1">
         {tab === 'analytics' && <Analytics />}
         {tab === 'committees' && <Committees />}
+        {tab === 'types' && <CommitteeTypes />}
         {tab === 'grades' && <ParticipationOverview />}
         {tab === 'rubric' && <RubricEditor />}
         {tab === 'users' && <Users />}

@@ -96,6 +96,38 @@ const FORMAL: Record<string, string> = {
   'republic of congo': 'cg', 'congo brazzaville': 'cg', 'congo kinshasa': 'cd',
   'japan': 'jp', 'new zealand': 'nz', 'ireland': 'ie', 'romania': 'ro', 'ukraine': 'ua', 'georgia': 'ge',
 };
+
+// More formal names in Spanish (official names in the Spanish locale are indexed automatically).
+const FORMAL_ES: Record<string, string> = {
+  'republica francesa': 'fr', 'republica italiana': 'it', 'republica portuguesa': 'pt', 'republica helenica': 'gr', 'republica de hungria': 'hu',
+  'republica federal de alemania': 'de', 'reino de espana': 'es', 'reino hachemita de jordania': 'jo', 'republica arabe de egipto': 'eg',
+  'republica popular china': 'cn', 'republica popular de china': 'cn', 'federacion de rusia': 'ru', 'federacion rusa': 'ru',
+  'republica federativa del brasil': 'br', 'republica federativa de brasil': 'br', 'estados unidos mexicanos': 'mx',
+  'estados unidos de america': 'us', 'reino unido de gran bretana e irlanda del norte': 'gb', 'mancomunidad de australia': 'au',
+  'republica de la india': 'in', 'republica federal de nigeria': 'ng', 'republica bolivariana de venezuela': 've', 'estado plurinacional de bolivia': 'bo',
+  'republica oriental del uruguay': 'uy', 'republica argentina': 'ar', 'republica islamica de iran': 'ir', 'republica islamica de pakistan': 'pk',
+  'republica democratica socialista de sri lanka': 'lk', 'republica popular de bangladesh': 'bd', 'republica socialista de viet nam': 'vn',
+  'republica democratica popular lao': 'la', 'republica popular democratica de corea': 'kp', 'republica de corea': 'kr',
+  'reino de arabia saudita': 'sa', 'sultanato de oman': 'om', 'estado de qatar': 'qa', 'estado de kuwait': 'kw', 'estado de israel': 'il',
+  'republica arabe siria': 'sy', 'republica libanesa': 'lb', 'reino de los paises bajos': 'nl', 'reino de belgica': 'be',
+  'gran ducado de luxemburgo': 'lu', 'principado de monaco': 'mc', 'principado de liechtenstein': 'li', 'principado de andorra': 'ad',
+  'confederacion suiza': 'ch', 'republica de austria': 'at', 'reino de dinamarca': 'dk', 'reino de suecia': 'se', 'reino de noruega': 'no',
+  'republica de finlandia': 'fi', 'republica de islandia': 'is', 'republica checa': 'cz', 'republica eslovaca': 'sk', 'republica de polonia': 'pl',
+  'estado independiente de papua nueva guinea': 'pg', 'estado independiente de samoa': 'ws', 'mancomunidad de las bahamas': 'bs',
+  'mancomunidad de dominica': 'dm', 'federacion de san cristobal y nieves': 'kn', 'republica de trinidad y tobago': 'tt',
+  'republica de filipinas': 'ph', 'republica de indonesia': 'id', 'republica de la union de myanmar': 'mm', 'union de las comoras': 'km',
+  'republica unida de tanzania': 'tz', 'republica democratica federal de etiopia': 'et', 'republica democratica del congo': 'cd',
+  'republica del congo': 'cg', 'reino de eswatini': 'sz', 'reino de lesoto': 'ls', 'reino de marruecos': 'ma', 'reino de tailandia': 'th',
+  'reino de camboya': 'kh', 'reino de butan': 'bt', 'reino de tonga': 'to', 'republica de cabo verde': 'cv', 'republica de costa de marfil': 'ci',
+  'republica de cote d ivoire': 'ci', 'republica togolesa': 'tg', 'republica gabonesa': 'ga', 'republica kirguisa': 'kg', 'republica de bielorrusia': 'by',
+  'republica de macedonia del norte': 'mk', 'republica de turquia': 'tr', 'republica de turkiye': 'tr', 'republica de sudafrica': 'za',
+  'republica sudafricana': 'za', 'republica de corea del sur': 'kr', 'republica de china': 'tw', 'republica cooperativa de guyana': 'gy',
+  'republica dominicana': 'do', 'republica de cuba': 'cu', 'republica de haiti': 'ht', 'republica de panama': 'pa', 'republica de el salvador': 'sv',
+  'republica de honduras': 'hn', 'republica de nicaragua': 'ni', 'republica de costa rica': 'cr', 'republica de guatemala': 'gt',
+  'republica del peru': 'pe', 'republica del ecuador': 'ec', 'republica de colombia': 'co', 'republica de chile': 'cl', 'republica del paraguay': 'py',
+  'republica de suriname': 'sr', 'republica de surinam': 'sr', 'estado de palestina': 'ps', 'estado de la ciudad del vaticano': 'va',
+  'ciudad del vaticano': 'va', 'estado de eritrea': 'er', 'republica de sudan del sur': 'ss', 'republica del sudan': 'sd',
+};
 // Titles that can be dropped from the front of a name ("Republic of X" → "X").
 const TITLES = [
   'democratic socialist republic of', 'socialist republic of', 'federal democratic republic of', 'democratic republic of', 'people s republic of',
@@ -135,6 +167,7 @@ function buildIndex() {
   }
   for (const [k, c] of Object.entries(ALIASES)) m.set(k, c);
   for (const [k, c] of Object.entries(FORMAL)) m.set(norm(k), c);
+  for (const [k, c] of Object.entries(FORMAL_ES)) m.set(norm(k), c);
   for (const k of AMBIGUOUS) m.delete(k);
   return m;
 }
@@ -168,7 +201,8 @@ export function flagFor(country: string | null | undefined, override?: string | 
 }
 
 // Sorted list for the "change flag" picker.
-export function flagOptions(lang: 'en' | 'es'): { code: string; name: string }[] {
+export function flagOptions(lang: 'en' | 'es', source?: string): { code: string; name: string }[] {
+  if (source === 'us_state') return [...US_STATE_NAMES].sort((a, b) => a.name.localeCompare(b.name));
   const list = Object.entries(countries.getNames(lang, { select: 'official' })).map(([code, name]) => ({ code: code.toLowerCase(), name }));
   for (const [c, n] of Object.entries(EXTRA)) list.push({ code: c, name: n[lang] });
   return list.sort((a, b) => a.name.localeCompare(b.name, lang));
@@ -186,4 +220,69 @@ export function matchesCountry(country: string, query: string, override?: string
     if (n && norm(n).includes(q)) return true;
   }
   return false;
+}
+
+
+// Find a country anywhere inside a longer text ("Prosecutor for the Federal Republic of Germany"),
+// preferring the longest name. Used by committee types whose country column is free text.
+export function findCountryIn(text: string | null | undefined): string | null {
+  if (!text) return null;
+  index ||= buildIndex();
+  const direct = guessFlag(text);
+  if (direct) return direct;
+  const words = norm(text).split(' ').filter(Boolean);
+  for (let len = Math.min(8, words.length); len >= 1; len--) {
+    for (let i = 0; i + len <= words.length; i++) {
+      const gram = words.slice(i, i + len).join(' ');
+      if (len === 1 && gram.length < 4) continue; // "of", "us", "uk"... too short to trust as a lone word
+      const hit = index.get(gram);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+// ───────── US states (for the US Senate) ─────────
+const US_STATES: [string, string][] = [
+  ['al', 'Alabama'], ['ak', 'Alaska'], ['az', 'Arizona'], ['ar', 'Arkansas'], ['ca', 'California'], ['co', 'Colorado'], ['ct', 'Connecticut'],
+  ['de', 'Delaware'], ['fl', 'Florida'], ['ga', 'Georgia'], ['hi', 'Hawaii'], ['id', 'Idaho'], ['il', 'Illinois'], ['in', 'Indiana'], ['ia', 'Iowa'],
+  ['ks', 'Kansas'], ['ky', 'Kentucky'], ['la', 'Louisiana'], ['me', 'Maine'], ['md', 'Maryland'], ['ma', 'Massachusetts'], ['mi', 'Michigan'],
+  ['mn', 'Minnesota'], ['ms', 'Mississippi'], ['mo', 'Missouri'], ['mt', 'Montana'], ['ne', 'Nebraska'], ['nv', 'Nevada'], ['nh', 'New Hampshire'],
+  ['nj', 'New Jersey'], ['nm', 'New Mexico'], ['ny', 'New York'], ['nc', 'North Carolina'], ['nd', 'North Dakota'], ['oh', 'Ohio'], ['ok', 'Oklahoma'],
+  ['or', 'Oregon'], ['pa', 'Pennsylvania'], ['ri', 'Rhode Island'], ['sc', 'South Carolina'], ['sd', 'South Dakota'], ['tn', 'Tennessee'], ['tx', 'Texas'],
+  ['ut', 'Utah'], ['vt', 'Vermont'], ['va', 'Virginia'], ['wa', 'Washington'], ['wv', 'West Virginia'], ['wi', 'Wisconsin'], ['wy', 'Wyoming'],
+  ['dc', 'District of Columbia'], ['pr', 'Puerto Rico'], ['gu', 'Guam'], ['vi', 'US Virgin Islands'], ['as', 'American Samoa'], ['mp', 'Northern Mariana Islands'],
+];
+const US_STATE_ALIASES: Record<string, string> = {
+  'nueva york': 'ny', 'carolina del norte': 'nc', 'carolina del sur': 'sc', 'dakota del norte': 'nd', 'dakota del sur': 'sd', 'nueva jersey': 'nj',
+  'nueva hampshire': 'nh', 'nuevo mexico': 'nm', 'virginia occidental': 'wv', hawai: 'hi', luisiana: 'la', misisipi: 'ms', misuri: 'mo', pensilvania: 'pa',
+  'isla de rhode': 'ri', 'distrito de columbia': 'dc', 'washington dc': 'dc', 'washington d c': 'dc', 'virgin islands': 'vi', 'islas virgenes de ee uu': 'vi',
+  'samoa americana': 'as', 'islas marianas del norte': 'mp', 'puerto rico': 'pr',
+};
+let stateIndex: Map<string, string> | null = null;
+// "Texas", "TX", "texas, usa" → 'us-tx'. null when it is not a state.
+export function usStateFlag(text: string | null | undefined): string | null {
+  if (!text) return null;
+  if (!stateIndex) {
+    stateIndex = new Map();
+    for (const [c, n] of US_STATES) {
+      stateIndex.set(norm(n), c);
+      stateIndex.set(c, c);
+    }
+    for (const [k, c] of Object.entries(US_STATE_ALIASES)) stateIndex.set(k, c);
+  }
+  const n = norm(text).replace(/^(state of|estado de) /, '').replace(/ (usa|us|u s|ee uu)$/, '');
+  const c = stateIndex.get(n);
+  return c ? `us-${c}` : null;
+}
+export const US_STATE_NAMES = US_STATES.map(([code, name]) => ({ code: `us-${code}`, name }));
+
+// One entry point for every committee type: which flag code (ISO code, or 'us-xx' for a state) goes with this text.
+export function resolveFlag(source: 'country' | 'country_in_text' | 'us_state' | 'none', text: string | null | undefined, override?: string | null): string | null {
+  if (override === 'none') return null;
+  if (override) return override.toLowerCase();
+  if (source === 'none') return null;
+  if (source === 'us_state') return usStateFlag(text);
+  if (source === 'country_in_text') return findCountryIn(text);
+  return guessFlag(text);
 }

@@ -9,7 +9,7 @@ import { endSpeech } from '@/lib/session';
 import { toastError } from '@/lib/toast';
 import { CommitteeState, Delegate, SpeakerEntry, TimerState } from '@/lib/types';
 import { useT } from '@/lib/i18n';
-import { Flag } from '../Flag';
+import { Flag, GroupBadge } from '../Flag';
 import { Empty } from '../ui';
 import { TimerPanel } from '../LiveTimer';
 
@@ -66,7 +66,7 @@ export function Speakers({ committeeId, state, update }: { committeeId: string; 
           <div className="mt-1 min-h-[3.5rem]">
             {speaker ? (
               <>
-                <div className="flex items-center gap-2 text-2xl font-bold"><Flag country={speaker.country} flag={speaker.flag} className="text-xl" />{speaker.country}</div>
+                <div className="flex items-center gap-2 text-2xl font-bold"><Flag country={speaker.country} flag={speaker.flag} className="text-xl" />{speaker.country}<GroupBadge groupKey={speaker.group_key} className="!text-xs" /></div>
                 <div className="text-sm text-slate-500">{speaker.name || t('Delegate name placeholder')}</div>
               </>
             ) : (
@@ -124,7 +124,7 @@ export function Speakers({ committeeId, state, update }: { committeeId: string; 
                 return (
                   <li key={e.id} className="flex items-center gap-3 py-2">
                     <span className="w-6 text-center text-sm font-bold text-slate-400">{i + 1}</span>
-                    <span className="flex flex-1 items-center gap-2 font-medium">{d && <Flag country={d.country} flag={d.flag} />}{d?.country || t('Unknown')}</span>
+                    <span className="flex flex-1 items-center gap-2 font-medium">{d && <Flag country={d.country} flag={d.flag} />}{d?.country || t('Unknown')}{d && <GroupBadge groupKey={d.group_key} />}</span>
                     <button className="btn btn-ghost btn-sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label={t('Move up')}>↑</button>
                     <button className="btn btn-ghost btn-sm" onClick={() => move(i, 1)} disabled={i === queue.length - 1} aria-label={t('Move down')}>↓</button>
                     <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(e.id)}>{t('Remove')}</button>

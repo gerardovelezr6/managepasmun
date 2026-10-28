@@ -1,8 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { useLiveReload, useTick } from '@/lib/hooks';
+import { useLiveReload, useSecretTopics, useTick } from '@/lib/hooks';
+import { catalogOf, categoryOf, typeOf } from '@/lib/catalog';
+import { useSettings } from '../BrandProvider';
 import { MODE_LABEL } from '@/lib/config';
 import { CommitteeAnalytics, SessionRow } from '@/lib/types';
 import { Empty, StatusBadge } from '../ui';
@@ -21,7 +23,18 @@ function elapsed(r: CommitteeAnalytics, sessions: SessionRow[]) {
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
 }
 
+// Topics can be long: show two lines, click to read the whole thing.
+function TopicCell({ text }: { text: string }) {
+  const [full, setFull] = useState(false);
+  return (
+    <button type="button" onClick={() => setFull((v) => !v)} title={full ? 'Click to shorten' : 'Click to read the full topic'} className={`mt-0.5 block max-w-md text-left text-xs text-slate-500 ${full ? '' : 'line-clamp-2'}`}>{text}</button>
+  );
+}
+
 export function Analytics() {
+  const { settings } = useSettings();
+  const catalog = catalogOf(settings);
+  const secrets = useSecretTopics();
   const [rows, setRows] = useState<CommitteeAnalytics[]>([]);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [updated, setUpdated] = useState<Date | null>(null);
@@ -37,6 +50,10 @@ export function Analytics() {
     setUpdated(new Date());
   });
 
+  const grouped = useMemo(() => {
+    const keys = [...catalog.categories.map((c) => c.key), ''];
+    return keys.map((k) => ({ key: k, cat: categoryOf(catalog, k), items: rows.filter((r) => (categoryOf(catalog, r.category)?.key || '') === k) })).filter((g) => g.items.length);
+  }, [rows, catalog]);
   const sum = (k: keyof CommitteeAnalytics) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
   const inSession = rows.filter((r) => r.status === 'in_session').length;
 
@@ -77,13 +94,24 @@ export function Analytics() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((r) => {
+              {grouped.map((g) => (
+                <Fragment key={g.key || 'none'}>
+                  <tr className="bg-slate-50">
+                    <td colSpan={9} className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">
+                      <span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: g.cat?.color || '#94a3b8' }} />
+                      {g.cat?.name || 'Uncategorized'} <span className="font-medium normal-case text-slate-400">· {g.items.filter((r) => r.status === 'in_session').length} of {g.items.length} in session</span>
+                    </td>
+                  </tr>
+                  {g.items.map((r) => {
                 const pct = r.delegates_total ? Math.round((r.delegates_present / r.delegates_total) * 100) : 0;
+                const secret = typeOf(catalog, r.type).secret_topic;
+                const topic = secret ? (secrets[r.committee_id] ? `🔒 ${secrets[r.committee_id]}` : '🔒 Confidential') : r.topic;
                 return (
                   <tr key={r.committee_id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <Link href={`/committee/${r.committee_id}/run`} className="font-semibold hover:text-brand">{r.name}</Link>
-                      <div className="scroll-x max-w-xs text-xs text-slate-500">{r.topic}</div>
+                      {typeOf(catalog, r.type).key !== 'standard' && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">{typeOf(catalog, r.type).name}</span>}
+                      <TopicCell text={topic} />
                     </td>
                     <td className="px-3 py-3">
                       <StatusBadge status={r.status} />
@@ -103,7 +131,9 @@ export function Analytics() {
                     <td className="px-3 py-3 text-right tabular-nums text-slate-500">{elapsed(r, sessions)}</td>
                   </tr>
                 );
-              })}
+                  })}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>

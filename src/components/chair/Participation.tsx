@@ -20,7 +20,7 @@ import {
   WarningRow,
 } from '@/lib/types';
 import { useAuth } from '../AuthProvider';
-import { Flag } from '../Flag';
+import { Flag, GroupBadge } from '../Flag';
 import { Empty } from '../ui';
 
 const CATEGORY_SHORT: Record<string, string> = Object.fromEntries(GRADING_CATEGORIES.map((c) => [c.value, c.short]));
@@ -229,6 +229,7 @@ export function Participation({ committeeId, state }: { committeeId: string; sta
                     <div className="flex flex-wrap items-center gap-2">
                       <Flag country={d.country} flag={d.flag} />
                       <span className="font-bold">{d.country}</span>
+                      <GroupBadge groupKey={d.group_key} />
                       {a?.late && <span className="badge bg-amber-100 text-amber-800">{t('Late')}</span>}
                       {absent && <span className="badge bg-slate-200 text-slate-600">{t('Absent')}</span>}
                       {myWarnings.length > 0 && <span title={t('Warnings')} className={`badge ${myWarnings.length >= 3 ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700'}`}>⚠ {myWarnings.length}</span>}
