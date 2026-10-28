@@ -65,15 +65,15 @@ function Display({ id }: { id: string }) {
   const present = delegates.filter((d) => d.attendance !== 'absent').length;
   const quorum = Math.ceil(delegates.length * APP_CONFIG.quorum.debateFraction);
 
-  if (missing) return <div className="flex min-h-screen items-center justify-center bg-stage text-2xl text-white">{t('Committee not found')}</div>;
-  if (!committee || !state) return <div className="flex min-h-screen items-center justify-center bg-stage text-xl text-slate-400">{t('Connecting…')}</div>;
+  if (missing) return <div className="flex min-h-screen items-center justify-center bg-stage text-2xl text-white on-dark">{t('Committee not found')}</div>;
+  if (!committee || !state) return <div className="flex min-h-screen items-center justify-center bg-stage on-dark text-xl text-slate-400">{t('Connecting…')}</div>;
 
   const speaker = state.current_speaker_id ? byId.get(state.current_speaker_id) : null;
   const sessionNumber = sessions.find((s) => s.id === state.current_session_id)?.number;
   const live = state.status === 'in_session';
 
   return (
-    <div className="flex min-h-screen flex-col bg-stage text-white">
+    <div className="flex min-h-screen flex-col bg-stage text-white on-dark">
       {/* Header */}
       <header className="flex items-center gap-5 border-b border-stage-line px-8 py-4">
         <BrandMark size={52} />

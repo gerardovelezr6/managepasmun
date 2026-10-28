@@ -10,7 +10,7 @@ const config: Config = {
       borderRadius: { none: '0', sm: '0', DEFAULT: '0', md: '0', lg: '0', xl: '0', '2xl': '0', '3xl': '0', full: '9999px' },
       colors: {
         // Neutral scale: body text #5E6973 (slate-500), strong text and headings deep indigo (slate-900).
-        slate: { 50: '#F7F8FA', 100: '#EEF0F3', 200: '#DFE3E8', 300: '#C9CFD6', 400: '#9AA4AE', 500: '#5E6973', 600: '#4B555F', 700: '#38414A', 800: '#1E1D3D', 900: '#21145F' },
+        slate: { 50: '#F7F8FA', 100: '#EEF0F3', 200: '#DFE3E8', 300: '#C9CFD6', 400: '#9AA4AE', 500: '#5E6973', 600: '#4B555F', 700: '#38414A', 800: 'rgb(var(--ink2) / <alpha-value>)', 900: 'rgb(var(--ink) / <alpha-value>)' },
         red: { 50: '#FEF2F2', 100: '#FDE2E2', 200: '#FBC4C4', 300: '#F59A9A', 400: '#EB6464', 500: '#DC3A3A', 600: '#CC1010', 700: '#A80D0D', 800: '#870F0F', 900: '#6B1010' },
         brand: 'rgb(var(--brand) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
@@ -20,9 +20,9 @@ const config: Config = {
           faint: '#94a3b8',
         },
         stage: {
-          DEFAULT: '#0F0E3A',
-          raised: '#1E1D3D',
-          line: '#303065',
+          DEFAULT: 'rgb(var(--stage) / <alpha-value>)',
+          raised: 'rgb(var(--stage-raised) / <alpha-value>)',
+          line: 'rgb(var(--stage-line) / <alpha-value>)',
         },
       },
       fontFamily: {

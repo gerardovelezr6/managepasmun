@@ -8,6 +8,12 @@
 :root {
   --brand: 30 64 175;
   --accent: 245 158 11;
+  /* Darkened brand tones, recomputed from the brand colour by BrandProvider. */
+  --ink: 14 29 79;
+  --ink2: 20 42 114;
+  --stage: 7 14 38;
+  --stage-raised: 10 20 56;
+  --stage-line: 15 32 88;
 }
 
 /* Design language: Montserrat, roomy 15/26 body text in slate, deep-indigo headings, square flat
@@ -17,6 +23,8 @@
   html { -webkit-text-size-adjust: 100%; }
   body { @apply bg-white text-slate-500 antialiased; font-size: 15px; line-height: 1.73; }
   h1, h2, h3, h4 { @apply font-bold text-slate-900; }
+  /* Headings are dark by default; on dark surfaces they take the surface's text colour. */
+  .on-dark :is(h1, h2, h3, h4) { color: inherit; }
   ::selection { background: rgb(var(--brand) / 0.18); }
   * { scrollbar-width: thin; scrollbar-color: #C9CFD6 transparent; }
 }

@@ -51,6 +51,14 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
     root.style.setProperty('--brand', hexToRgbTriplet(settings.primary_color, APP_CONFIG.fallbackPrimary));
     root.style.setProperty('--accent', hexToRgbTriplet(settings.accent_color, APP_CONFIG.fallbackAccent));
+    // Every dark tone (headings, projection screen) is the brand colour darkened, so the whole app follows the logo's colour.
+    const [r, g, b] = hexToRgbTriplet(settings.primary_color, APP_CONFIG.fallbackPrimary).split(' ').map(Number);
+    const dark = (k: number) => `${Math.round(r * k)} ${Math.round(g * k)} ${Math.round(b * k)}`;
+    root.style.setProperty('--ink', dark(0.45));
+    root.style.setProperty('--ink2', dark(0.65));
+    root.style.setProperty('--stage', dark(0.22));
+    root.style.setProperty('--stage-raised', dark(0.32));
+    root.style.setProperty('--stage-line', dark(0.5));
     document.title = `${settings.short_name || 'MUN'} · ${APP_CONFIG.appName}`;
   }, [settings]);
 
