@@ -16,14 +16,17 @@ import { Voting } from '@/components/chair/Voting';
 import { Participation } from '@/components/chair/Participation';
 import { GradingLog } from '@/components/chair/GradingLog';
 import { MODE_LABEL } from '@/lib/config';
-import { LangProvider, useT } from '@/lib/i18n';
-import { useClockSync, useCommittee, useCommitteeState, useRows } from '@/lib/hooks';
+import { useT } from '@/lib/i18n';
+import { CommitteeProvider, useCommitteeType } from '@/lib/committeeContext';
+import { useClockSync, useCommittee, useCommitteeState, useRows, useSecretTopics } from '@/lib/hooks';
 import { closeSession, openSession } from '@/lib/session';
 import { Delegate, EventRow, SessionRow } from '@/lib/types';
 
 function Console({ id }: { id: string }) {
   const { canRun } = useAuth();
   const t = useT();
+  const type = useCommitteeType();
+  const secrets = useSecretTopics();
   const { committee, missing } = useCommittee(id);
   const { state, update, refresh } = useCommitteeState(id);
   const { rows: sessions } = useRows<SessionRow>('sessions', id, 'number');
@@ -63,7 +66,7 @@ function Console({ id }: { id: string }) {
         <div className="min-w-0 flex-1">
           <div className="text-xs font-bold uppercase tracking-wider text-brand">{committee.abbreviation}</div>
           <h1 className="truncate text-xl font-bold">{committee.name}</h1>
-          <p className="scroll-x text-sm text-slate-500">{committee.topic}</p>
+          <p className="scroll-x text-sm text-slate-500">{type.secret_topic ? `🔒 ${secrets[id] || t('Confidential')}` : committee.topic}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
@@ -130,11 +133,11 @@ export default function RunPage() {
   const { committee } = useCommittee(params.id);
   // Spanish committees translate the whole screen, header included.
   return (
-    <LangProvider lang={committee?.language}>
+    <CommitteeProvider committee={committee}>
       <AppHeader />
       <RequireAuth>
         <Console id={params.id} />
       </RequireAuth>
-    </LangProvider>
+    </CommitteeProvider>
   );
 }

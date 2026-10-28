@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRubric } from '@/lib/hooks';
 import { GRADING_CATEGORIES } from '@/lib/config';
@@ -12,6 +12,24 @@ type Cat = RubricLevel['category'];
 
 // High Command edits the participation rubric here. Scores already given keep the score and wording
 // they had when they were awarded, so editing the rubric never changes past grades.
+// A text box that grows to fit its text, so long descriptions are never cut off.
+function AutoText({ defaultValue, placeholder, onSave }: { defaultValue: string; placeholder?: string; onSave: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const fit = () => {
+    const el = ref.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight + 2}px`;
+    }
+  };
+  useEffect(fit, [defaultValue]);
+  useEffect(() => {
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+  return <textarea ref={ref} rows={2} className="input resize-none overflow-hidden leading-relaxed" defaultValue={defaultValue} placeholder={placeholder} onInput={fit} onBlur={(e) => onSave(e.target.value)} />;
+}
+
 export function RubricEditor() {
   const { levels, reload } = useRubric();
   const { settings, reload: reloadSettings } = useSettings();
@@ -76,35 +94,37 @@ export function RubricEditor() {
       {list.length === 0 ? <Empty>No levels yet for this category.</Empty> : (
         <div className="space-y-2">
           {list.map((l) => (
-            <div key={l.id} className="card grid gap-3 p-4 sm:grid-cols-12">
-              <Field label="Button">
-                <input className="input" defaultValue={l.level_key} disabled title="The button label can't be changed because past scores refer to it. Remove and re-add to rename." />
-              </Field>
-              <div className="sm:col-span-2">
-                <Field label="Score">
-                  <input type="number" step="0.5" className="input" defaultValue={l.score} onBlur={(e) => Number(e.target.value) !== l.score && Number.isFinite(Number(e.target.value)) && patch(l, { score: Number(e.target.value) })} />
-                </Field>
+            <div key={l.id} className="card space-y-3 p-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="w-24">
+                  <Field label="Button">
+                    <input className="input text-center font-bold" defaultValue={l.level_key} disabled title="The button label can't be changed because past scores refer to it. Remove and re-add to rename." />
+                  </Field>
+                </div>
+                <div className="w-28">
+                  <Field label="Score">
+                    <input type="number" step="0.5" className="input" defaultValue={l.score} onBlur={(e) => Number(e.target.value) !== l.score && Number.isFinite(Number(e.target.value)) && patch(l, { score: Number(e.target.value) })} />
+                  </Field>
+                </div>
+                <button className="btn btn-ghost btn-sm ml-auto text-red-600" onClick={() => remove(l)}>Remove level</button>
               </div>
-              <div className="sm:col-span-4">
-                <Field label="Short wording">
-                  <input className="input" defaultValue={l.label} onBlur={(e) => e.target.value !== l.label && patch(l, { label: e.target.value })} />
-                </Field>
-              </div>
-              <div className="sm:col-span-4">
-                <Field label="Full rubric description">
-                  <textarea className="input h-20" defaultValue={l.description} onBlur={(e) => e.target.value !== l.description && patch(l, { description: e.target.value })} />
-                </Field>
-              </div>
-              <div className="flex items-end sm:col-span-1">
-                <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(l)}>Remove</button>
-              </div>
-              <div className="grid gap-3 border-t border-slate-100 pt-3 sm:col-span-12 sm:grid-cols-2">
-                <Field label="Spanish wording (Spanish committees)">
-                  <input className="input" defaultValue={l.label_es || ''} placeholder={l.label} onBlur={(e) => e.target.value !== (l.label_es || '') && patch(l, { label_es: e.target.value || null })} />
-                </Field>
-                <Field label="Spanish description">
-                  <textarea className="input h-16" defaultValue={l.description_es || ''} placeholder={l.description} onBlur={(e) => e.target.value !== (l.description_es || '') && patch(l, { description_es: e.target.value || null })} />
-                </Field>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <Field label="Short wording (English)">
+                    <input className="input" defaultValue={l.label} onBlur={(e) => e.target.value !== l.label && patch(l, { label: e.target.value })} />
+                  </Field>
+                  <Field label="Full rubric description (English)">
+                    <AutoText defaultValue={l.description} onSave={(v) => v !== l.description && patch(l, { description: v })} />
+                  </Field>
+                </div>
+                <div className="space-y-3 lg:border-l lg:border-slate-100 lg:pl-4">
+                  <Field label="Spanish wording (Spanish committees)">
+                    <input className="input" defaultValue={l.label_es || ''} placeholder={l.label} onBlur={(e) => e.target.value !== (l.label_es || '') && patch(l, { label_es: e.target.value || null })} />
+                  </Field>
+                  <Field label="Spanish description">
+                    <AutoText defaultValue={l.description_es || ''} placeholder={l.description} onSave={(v) => v !== (l.description_es || '') && patch(l, { description_es: v || null })} />
+                  </Field>
+                </div>
               </div>
             </div>
           ))}

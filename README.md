@@ -100,3 +100,13 @@ Run `supabase/migrations/006_calls_languages_flags.sql` in the SQL Editor. It is
 - **Call of attention**: a second button next to Warning in the Participation tab. It is counted separately and has its own column in the exported spreadsheet.
 - **Spanish committees**: pick the language when creating a committee (or edit it later). Chair screens, the projection screen and the export are then in Mexican Spanish for that committee only. Missing translations fall back to English. Rubric wording in Spanish is edited in Grading rubric.
 - **Flags**: shown beside country names, chosen automatically from the name. Ambiguous names ("Congo", "Korea") get none until set by hand with the flag menu in Roll call, Manage delegate list.
+
+## Committee types, categories and crisis topics
+
+Run `supabase/migrations/007_committee_types.sql` in the SQL Editor (safe to re-run).
+
+- **Categories**: General Assembly, Security Council, ECOSOC, Specialized. Committees are grouped by category on the dashboard, Committees tab and Live analytics.
+- **Types**: Standard, Specialized (tag only), US Senate (Democrat / Republican, state flags), Senado de México (MORENA, PVEM, PAN, PT, MC, PRI), ICC (Prosecution / Defense / Judges, country flag found inside the text) and Crisis (confidential topic).
+- **Everything is editable** in High Command → *Types & categories*: names (English and Spanish), categories, field names, flag source, parties/sides with colours and uploaded logos, bulk-add column order and the confidential-topic switch. New types can be added there with no code change.
+- **Adding delegates** (Roll call → Manage delegate list) uses the columns of the type, e.g. `Texas, Name, Republican` (Senate) or `Prosecution, Name, Federal Republic of Germany` (ICC).
+- **Crisis topic**: stored in a separate table the public key cannot read. High Command and advisors always see it; assigned chairs only once half of all committees have been in session (latched; *Lock again* in the Committees tab resets it). The projection screen never shows it.

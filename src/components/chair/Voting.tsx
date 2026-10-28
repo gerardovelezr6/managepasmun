@@ -8,7 +8,7 @@ import { VOTE_LABEL_PRESETS } from '@/lib/config';
 import { useSettings } from '../BrandProvider';
 import { CommitteeState, Delegate, VoteRecord, VoteRow } from '@/lib/types';
 import { useT } from '@/lib/i18n';
-import { Flag } from '../Flag';
+import { Flag, GroupBadge } from '../Flag';
 import { Empty, Field, Seg } from '../ui';
 
 type Choice = VoteRecord['choice'];
@@ -152,7 +152,7 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
                     const d = delegates.find((x) => x.id === r.delegate_id);
                     return (
                       <li key={r.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
-                        <span className="flex min-w-0 flex-1 items-center gap-2 truncate font-semibold">{d && <Flag country={d.country} flag={d.flag} />}{d?.country || t('Unknown')}</span>
+                        <span className="flex min-w-0 flex-1 items-center gap-2 truncate font-semibold">{d && <Flag country={d.country} flag={d.flag} />}{d?.country || t('Unknown')}{d && <GroupBadge groupKey={d.group_key} />}</span>
                         <span className={`badge ${r.choice === 'for' ? 'bg-emerald-100 text-emerald-700' : r.choice === 'against' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'}`}>{t(CHOICE_LABEL[r.choice])}</span>
                         <ExplainButton rec={r} />
                       </li>
@@ -212,7 +212,7 @@ export function Voting({ committeeId, update }: { committeeId: string; state: Co
           return (
             <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 truncate font-semibold"><Flag country={d.country} flag={d.flag} />{d.country}</div>
+                <div className="flex items-center gap-2 truncate font-semibold"><Flag country={d.country} flag={d.flag} />{d.country}<GroupBadge groupKey={d.group_key} /></div>
                 <div className="text-xs text-slate-400">{d.attendance === 'present_and_voting' ? t('Present & voting') : t('Present')}</div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">

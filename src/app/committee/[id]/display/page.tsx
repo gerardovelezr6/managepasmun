@@ -8,7 +8,9 @@ import { APP_CONFIG, MODE_LABEL, MOTION_TYPES, SESSION_STATUS_LABEL, codeFor, la
 import { useClockSync, useCommittee, useCommitteeState, useRows, useTick } from '@/lib/hooks';
 import { THRESHOLD_LABEL, tally, voteOutcome } from '@/lib/session';
 import { Delegate, EventRow, SessionRow, SpeakerEntry, VoteRecord, VoteRow } from '@/lib/types';
-import { LangProvider, useT } from '@/lib/i18n';
+import { useT } from '@/lib/i18n';
+import { CommitteeProvider, useCommitteeType } from '@/lib/committeeContext';
+import { GroupBadge } from '@/components/Flag';
 import { Flag } from '@/components/Flag';
 
 // Read-only, clutter-free projection screen for delegates. No controls, no login.
@@ -17,14 +19,15 @@ export default function DisplayPage() {
   const { id } = useParams<{ id: string }>();
   const { committee } = useCommittee(id);
   return (
-    <LangProvider lang={committee?.language}>
+    <CommitteeProvider committee={committee}>
       <Display id={id} />
-    </LangProvider>
+    </CommitteeProvider>
   );
 }
 
 function Display({ id }: { id: string }) {
   const t = useT();
+  const type = useCommitteeType();
   const { settings } = useSettings();
   const { committee, missing } = useCommittee(id);
   const { state } = useCommitteeState(id);
@@ -77,7 +80,7 @@ function Display({ id }: { id: string }) {
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">{settings.conference_name}</div>
           <h1 className="truncate text-3xl font-extrabold">{committee.name}</h1>
-          <p className="scroll-x text-lg text-slate-300">{t('Topic')}: {committee.topic}</p>
+          <p className="scroll-x text-lg text-slate-300">{t('Topic')}: {type.secret_topic ? t('Confidential') : committee.topic}</p>
         </div>
         <div className="text-right">
           <div
@@ -120,6 +123,7 @@ function Display({ id }: { id: string }) {
               <div className="mt-2 flex items-center justify-center gap-5 text-7xl font-black leading-tight">
                 {speaker && <Flag country={speaker.country} flag={speaker.flag} className="!text-6xl" />}
                 <span>{speaker ? speaker.country : '—'}</span>
+                {speaker && <GroupBadge groupKey={speaker.group_key} className="!px-4 !py-1.5 !text-2xl" full />}
               </div>
               <LiveTimer timer={state.speaker_timer} className="mt-6 block font-mono text-[9rem] font-black leading-none" />
             </div>
@@ -169,7 +173,7 @@ function Display({ id }: { id: string }) {
                 {queue.slice(0, 8).map((e, i) => (
                   <li key={e.id} className="flex items-center gap-3 text-2xl">
                     <span className="w-8 text-right font-mono text-slate-500">{i + 1}</span>
-                    <span className={`inline-flex items-center gap-3 ${i === 0 ? 'font-bold text-white' : 'text-slate-200'}`}><Flag country={byId.get(e.delegate_id)?.country || ''} flag={byId.get(e.delegate_id)?.flag} className="!text-xl" />{byId.get(e.delegate_id)?.country}</span>
+                    <span className={`inline-flex items-center gap-3 ${i === 0 ? 'font-bold text-white' : 'text-slate-200'}`}><Flag country={byId.get(e.delegate_id)?.country || ''} flag={byId.get(e.delegate_id)?.flag} className="!text-xl" />{byId.get(e.delegate_id)?.country}<GroupBadge groupKey={byId.get(e.delegate_id)?.group_key} /></span>
                   </li>
                 ))}
                 {queue.length > 8 && <li className="pl-11 text-slate-500">{t('+ {n} more', { n: queue.length - 8 })}</li>}

@@ -189,3 +189,16 @@ export function useRubric() {
   }, [load]);
   return { levels, explanationPoints: Number(settings.explanation_points ?? 1), reload: load };
 }
+
+// Confidential topics (crisis committees) the signed-in person is allowed to read: High Command and advisors
+// always, assigned chairs once the conference has started. Everyone else simply gets nothing back.
+export function useSecretTopics() {
+  const [map, setMap] = useState<Record<string, string>>({});
+  useLiveReload(['committee_state', 'committees', 'settings'], async () => {
+    const { data } = await supabase().from('committee_secrets').select('committee_id, topic');
+    const m: Record<string, string> = {};
+    for (const r of (data || []) as { committee_id: string; topic: string }[]) m[r.committee_id] = r.topic;
+    setMap(m);
+  });
+  return map;
+}

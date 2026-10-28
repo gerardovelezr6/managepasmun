@@ -354,5 +354,10 @@ export const ES: Record<string, string> = {
   "Motion passed: finish reading position papers.": "Moción aprobada: terminar de leer los documentos de postura.",
   "Motion passed: extraordinary session of questions.": "Moción aprobada: sesión extraordinaria de preguntas.",
   "Motion passed. Caucus is ready on the Caucus tab.": "Moción aprobada. El caucus está listo en la pestaña Caucus.",
-  "Motion passed and applied.": "Moción aprobada y aplicada."
+  "Motion passed and applied.": "Moción aprobada y aplicada.",
+  "Confidential": "Confidencial",
+  "Delegate name": "Nombre del delegado",
+  "Group": "Grupo",
+  "Add delegates (one per line)": "Agregar delegaciones (una por línea)",
+  "Unknown {group} on: {line}": "{group} no reconocido en: {line}"
 };

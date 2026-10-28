@@ -6,6 +6,7 @@ import { toast, toastError } from '@/lib/toast';
 import { Profile } from '@/lib/types';
 import { useAuth } from '../AuthProvider';
 import { Field } from '../ui';
+import { ROLE_LABEL, groupByRole } from '@/lib/roles';
 
 async function api(method: string, body?: unknown, query = '') {
   const { data } = await supabase().auth.getSession();
@@ -19,7 +20,6 @@ async function api(method: string, body?: unknown, query = '') {
   return j;
 }
 
-const ROLE_LABEL: Record<string, string> = { advisor: 'Advisor', high_command: 'High Command', chair: 'Chair', pending: 'No access' };
 
 export function Users() {
   const { profile: me, isAdvisor } = useAuth();
@@ -87,9 +87,9 @@ export function Users() {
         <Field label="Temporary password" hint="At least 8 characters. Share it privately."><input type="text" required minLength={8} className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></Field>
         <Field label="Role">
           <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            <option value="chair">Committee Chair</option>
-            <option value="high_command">High Command (Secretariat)</option>
             {isAdvisor && <option value="advisor">Advisor</option>}
+            <option value="high_command">High Command (Secretariat)</option>
+            <option value="chair">Committee Chair</option>
           </select>
         </Field>
         <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</button>
@@ -97,8 +97,11 @@ export function Users() {
 
       <div className="card lg:col-span-2">
         <h3 className="mb-3 font-bold">Users ({users.length})</h3>
-        <div className="divide-y divide-slate-100">
-          {users.map((u) => (
+        {groupByRole(users).map((g) => (
+          <div key={g.role} className="mb-3 last:mb-0">
+            <div className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">{g.label} ({g.items.length})</div>
+            <div className="divide-y divide-slate-100">
+          {g.items.map((u) => (
             <div key={u.id} className="flex flex-wrap items-center gap-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{u.full_name || '(no name)'}{u.id === me?.id && <span className="ml-2 text-xs text-slate-400">you</span>}</div>
@@ -106,15 +109,17 @@ export function Users() {
               </div>
               <select className="input w-auto" value={u.role} disabled={u.id === me?.id || (u.role === 'advisor' && !isAdvisor)} onChange={(e) => setRole(u, e.target.value)}>
                 {u.role === 'pending' && <option value="pending">{ROLE_LABEL.pending}</option>}
-                <option value="chair">{ROLE_LABEL.chair}</option>
-                <option value="high_command">{ROLE_LABEL.high_command}</option>
                 {(isAdvisor || u.role === 'advisor') && <option value="advisor">{ROLE_LABEL.advisor}</option>}
+                <option value="high_command">{ROLE_LABEL.high_command}</option>
+                <option value="chair">{ROLE_LABEL.chair}</option>
               </select>
               <button className="btn btn-secondary btn-sm" disabled={u.role === 'advisor' && !isAdvisor} onClick={() => resetPw(u)}>Reset password</button>
               <button className="btn btn-ghost btn-sm text-red-600" disabled={u.id === me?.id || (u.role === 'advisor' && !isAdvisor)} onClick={() => remove(u)}>Delete</button>
             </div>
           ))}
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

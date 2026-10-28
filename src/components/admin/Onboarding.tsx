@@ -5,6 +5,7 @@ import { toast, toastError } from '@/lib/toast';
 import { Profile } from '@/lib/types';
 import { useAuth } from '../AuthProvider';
 import { Empty, Field } from '../ui';
+import { ROLE_LABEL, groupByRole } from '@/lib/roles';
 
 interface AuthStatus {
   id: string;
@@ -38,7 +39,6 @@ function statusOf(s?: AuthStatus): { text: string; tone: string } {
 }
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—');
-const ROLE_LABEL: Record<string, string> = { advisor: 'Advisor', high_command: 'High Command', chair: 'Chair', pending: 'No access' };
 
 // Invite people by email: they choose their own password through the emailed link.
 export function Onboarding() {
@@ -109,9 +109,9 @@ export function Onboarding() {
           <Field label="Email"><input type="email" required className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="chair@example.org" /></Field>
           <Field label="Role">
             <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="chair">Committee Chair</option>
-              <option value="high_command">High Command (Secretariat)</option>
               {isAdvisor && <option value="advisor">Advisor</option>}
+              <option value="high_command">High Command (Secretariat)</option>
+              <option value="chair">Committee Chair</option>
             </select>
           </Field>
           <button className="btn btn-primary w-full" disabled={busy}>{busy ? 'Creating…' : 'Create link'}</button>
@@ -133,8 +133,12 @@ export function Onboarding() {
       <div className="card lg:col-span-2">
         <h3 className="mb-3 font-bold">Accounts ({users.length})</h3>
         {users.length === 0 ? <Empty>No accounts yet.</Empty> : (
-          <div className="divide-y divide-slate-100">
-            {users.map((u) => {
+          <div>
+            {groupByRole(users).map((g) => (
+              <div key={g.role} className="mb-3 last:mb-0">
+                <div className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">{g.label} ({g.items.length})</div>
+                <div className="divide-y divide-slate-100">
+            {g.items.map((u) => {
               const s = status[u.id];
               const st = statusOf(s);
               return (
@@ -149,6 +153,9 @@ export function Onboarding() {
                 </div>
               );
             })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
         <p className="mt-3 text-xs text-slate-400">“Copy link” makes a fresh set-password link for that person. Use it for first-time setup or a forgotten password.</p>

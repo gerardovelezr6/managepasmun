@@ -23,11 +23,15 @@ export interface Settings {
   accent_color: string;
   default_speaking_sec: number;
   explanation_points: number;
+  committee_catalog?: import('./catalog').Catalog | null;
+  conference_started_at?: string | null;
 }
 
 export interface Committee {
   id: string;
   language: 'en' | 'es';
+  category?: string | null;
+  type?: string;
   name: string;
   abbreviation: string;
   topic: string;
@@ -60,6 +64,7 @@ export interface CommitteeState {
 export interface Delegate {
   id: string;
   flag?: string | null;
+  group_key?: string | null;
   committee_id: string;
   name: string;
   country: string;
@@ -139,6 +144,8 @@ export interface Announcement {
 
 export interface CommitteeAnalytics {
   committee_id: string;
+  category?: string | null;
+  type?: string;
   name: string;
   abbreviation: string;
   topic: string;
