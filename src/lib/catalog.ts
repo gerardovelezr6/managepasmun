@@ -72,7 +72,7 @@ export const DEFAULT_CATALOG: Catalog = {
     },
     {
       key: 'icc', name: 'ICC', name_es: 'CPI', default_category: 'specialized',
-      label_field: 'Country', label_field_es: 'País', flag: 'country_in_text', group_label: 'Side', group_label_es: 'Parte', group_required: true, bulk: ['group', 'name', 'country'],
+      label_field: 'Representative (Country)', label_field_es: 'Representante (País)', flag: 'country_in_text', group_label: 'Side', group_label_es: 'Parte', group_required: true, bulk: ['group', 'country', 'name'],
       groups: [
         { key: 'prosecution', name: 'Prosecution', name_es: 'Fiscalía', short: 'PRO', color: '#b45309' },
         { key: 'defense', name: 'Defense', name_es: 'Defensa', short: 'DEF', color: '#0f766e' },
