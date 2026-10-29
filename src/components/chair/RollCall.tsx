@@ -6,7 +6,7 @@ import { APP_CONFIG } from '@/lib/config';
 import { toast, toastError } from '@/lib/toast';
 import { Absence, Attendance, CommitteeState, Delegate, SessionAttendance, SessionRow } from '@/lib/types';
 import { LOCALE, useLang, useT } from '@/lib/i18n';
-import { flagOptions, resolveFlag } from '@/lib/countries';
+import { findCountryIn, flagOptions, resolveFlag } from '@/lib/countries';
 import { useCommitteeType } from '@/lib/committeeContext';
 import { matchGroup, nameIn } from '@/lib/catalog';
 import { Flag, GroupBadge } from '../Flag';
@@ -87,14 +87,30 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
       .map((l) => l.trim())
       .filter(Boolean)
       .map((l) => {
-        const parts = l.split(',').map((x) => x.trim());
+        // Split on commas that are not inside parentheses, so "Korea, Republic of" in "(…)" survives.
+        const parts: string[] = [];
+        let depth = 0, cur = '';
+        for (const ch of l) {
+          if (ch === '(') depth++;
+          if (ch === ')') depth = Math.max(0, depth - 1);
+          if (ch === ',' && depth === 0) { parts.push(cur.trim()); cur = ''; } else cur += ch;
+        }
+        parts.push(cur.trim());
         const head = parts.slice(0, cols.length - 1);
         const last = parts.slice(cols.length - 1).join(', ');
         const cells = [...head, last];
         const get = (c: string) => cells[cols.indexOf(c as any)] || '';
         const g = cols.includes('group') ? matchGroup(type, get('group')) : null;
         if (cols.includes('group') && type.group_required && !g) bad.push(l);
-        return { committee_id: committeeId, country: get('country'), name: get('name'), group_key: g?.key ?? null };
+        let country = get('country');
+        let flag: string | null = null;
+        if (type.flag === 'country_in_text') {
+          // "Gong Chu (People's Republic of China)": only the name is shown; the flag is cut from the country in brackets.
+          const m = country.match(/^(.*?)\s*\((.*)\)\s*$/);
+          flag = findCountryIn(m ? m[2] : country);
+          if (m && m[1]) country = m[1];
+        }
+        return { committee_id: committeeId, country, name: get('name'), group_key: g?.key ?? null, ...(flag ? { flag } : {}) };
       })
       .filter((r) => r.country || r.name);
     if (bad.length) return toastError(new Error(t('Unknown {group} on: {line}', { group: groupLabel.toLowerCase() || 'group', line: bad[0] })));

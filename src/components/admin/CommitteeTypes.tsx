@@ -18,6 +18,7 @@ const BULK: { value: string; label: string; cols: BulkColumn[] }[] = [
   { value: 'country,name', label: 'Country, Name', cols: ['country', 'name'] },
   { value: 'country,name,group', label: 'Country, Name, Group', cols: ['country', 'name', 'group'] },
   { value: 'group,name,country', label: 'Group, Name, Country', cols: ['group', 'name', 'country'] },
+  { value: 'group,country,name', label: 'Group, Country, Name', cols: ['group', 'country', 'name'] },
   { value: 'name,group', label: 'Name, Group', cols: ['name', 'group'] },
 ];
 
