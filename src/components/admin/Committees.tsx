@@ -75,32 +75,50 @@ export function Committees() {
   }
 
   async function save(c: Committee, patch: Partial<Committee>) {
-    const { error } = await supabase().from('committees').update(patch).eq('id', c.id);
-    if (error) return toastError(error);
+    // .select() so an update that touched no row (blocked by permissions, row gone) is reported instead of shown as "Saved".
+    const { data, error } = await supabase().from('committees').update(patch).eq('id', c.id).select('id');
+    if (error) { toastError(error); return false; }
+    if (!data?.length) { toastError(new Error('Nothing was saved: you may not have permission, or the committee no longer exists. Reload and try again.')); return false; }
     toast('Saved', 'success');
+    load();
+    return true;
   }
   async function saveTopic(c: Committee, topic: string) {
-    if (topic === topicOf(c)) return;
+    if (topic === topicOf(c)) return true;
     if (!typeFor(c).secret_topic) return save(c, { topic });
-    const { error } = await supabase().from('committee_secrets').upsert({ committee_id: c.id, topic, updated_at: new Date().toISOString() });
-    if (error) return toastError(error);
+    const { data, error } = await supabase().from('committee_secrets').upsert({ committee_id: c.id, topic, updated_at: new Date().toISOString() }).select('committee_id');
+    if (error) { toastError(error); return false; }
+    if (!data?.length) { toastError(new Error('Nothing was saved: you may not have permission.')); return false; }
     toast('Saved', 'success');
+    load();
+    return true;
   }
   // Switching a committee to or from a confidential-topic type moves the topic between the public and the private place.
   async function changeType(c: Committee, key: string) {
     const was = typeFor(c);
     const now = typeOf(catalog, key);
     const sb = supabase();
+    // Every write is checked: Supabase reports a blocked update as "0 rows", not as an error.
+    const fail = (e: unknown) => { toastError(e); load(); };
+    const upd = async (patch: Partial<Committee>) => {
+      const r = await sb.from('committees').update(patch).eq('id', c.id).select('id');
+      if (r.error) return r.error;
+      if (!r.data?.length) return new Error('Nothing was saved: you may not have permission. Reload and try again.');
+      return null;
+    };
     if (!was.secret_topic && now.secret_topic) {
       const r = await sb.from('committee_secrets').upsert({ committee_id: c.id, topic: c.topic });
-      if (r.error) return toastError(r.error);
-      await sb.from('committees').update({ type: key, topic: PLACEHOLDER }).eq('id', c.id);
+      if (r.error) return fail(r.error);
+      const e = await upd({ type: key, topic: PLACEHOLDER });
+      if (e) return fail(e);
     } else if (was.secret_topic && !now.secret_topic) {
-      await sb.from('committees').update({ type: key, topic: secrets[c.id] || '[Placeholder topic]' }).eq('id', c.id);
-      await sb.from('committee_secrets').delete().eq('committee_id', c.id);
+      const e = await upd({ type: key, topic: secrets[c.id] || '[Placeholder topic]' });
+      if (e) return fail(e);
+      const r = await sb.from('committee_secrets').delete().eq('committee_id', c.id);
+      if (r.error) return fail(r.error);
     } else {
-      const { error } = await sb.from('committees').update({ type: key }).eq('id', c.id);
-      if (error) return toastError(error);
+      const e = await upd({ type: key });
+      if (e) return fail(e);
     }
     toast('Saved', 'success');
     load();
@@ -154,9 +172,11 @@ export function Committees() {
     next.splice(at, 0, { ...moving, category: cat || null });
     const changed = next.map((c, i) => ({ c, order: i + 1 })).filter(({ c, order }) => (c.sort_order || 0) !== order || (c.id === id && (moving.category || '') !== cat));
     setCommittees(next.map((c, i) => ({ ...c, sort_order: i + 1 })));
-    const results = await Promise.all(changed.map(({ c, order }) => supabase().from('committees').update(c.id === id ? { sort_order: order, category: cat || null } : { sort_order: order }).eq('id', c.id)));
+    const results = await Promise.all(changed.map(({ c, order }) => supabase().from('committees').update(c.id === id ? { sort_order: order, category: cat || null } : { sort_order: order }).eq('id', c.id).select('id')));
     const failed = results.find((r) => r.error);
     if (failed?.error) toastError(failed.error);
+    else if (results.some((r) => !r.data?.length)) toastError(new Error('Order was not saved: you may not have permission.'));
+    else toast('Order saved', 'success');
     load();
   }
   const endDrag = () => { setDrag(null); setOver(null); };
@@ -275,9 +295,15 @@ export function Committees() {
                         {open === c.id && (
                           <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
                             <div className="grid gap-3 sm:grid-cols-3">
-                              <Field label="Name"><input className="input" defaultValue={c.name} onBlur={(e) => e.target.value !== c.name && save(c, { name: e.target.value })} /></Field>
-                              <Field label="Abbreviation"><input className="input" defaultValue={c.abbreviation} onBlur={(e) => e.target.value !== c.abbreviation && save(c, { abbreviation: e.target.value })} /></Field>
-                              <Field label={type.secret_topic ? 'Confidential topic' : 'Topic'}><input className="input" defaultValue={topic} key={`${c.id}-${topic}`} onBlur={(e) => saveTopic(c, e.target.value)} /></Field>
+                              <TextFields key={`${c.id}-${c.name}-${c.abbreviation}-${topic}`} c={c} topic={topic} secret={!!type.secret_topic} onSave={async (v) => {
+                                const patch: Partial<Committee> = {};
+                                if (v.name !== c.name) patch.name = v.name;
+                                if (v.abbreviation !== c.abbreviation) patch.abbreviation = v.abbreviation;
+                                let ok = true;
+                                if (Object.keys(patch).length) ok = (await save(c, patch)) !== false;
+                                if (ok && v.topic !== topic) ok = (await saveTopic(c, v.topic)) !== false;
+                                return ok;
+                              }} />
                             </div>
                             <div className="grid gap-3 sm:grid-cols-3">
                               <Field label="Type">
@@ -328,5 +354,29 @@ export function Committees() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Name, abbreviation and topic are edited together and saved with the button (or Enter), so nothing depends on clicking away.
+function TextFields({ c, topic, secret, onSave }: { c: Committee; topic: string; secret: boolean; onSave: (v: { name: string; abbreviation: string; topic: string }) => Promise<boolean> }) {
+  const [v, setV] = useState({ name: c.name, abbreviation: c.abbreviation, topic });
+  const [busy, setBusy] = useState(false);
+  const dirty = v.name !== c.name || v.abbreviation !== c.abbreviation || v.topic !== topic;
+  async function go(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!dirty || busy) return;
+    setBusy(true);
+    try { await onSave(v); } finally { setBusy(false); }
+  }
+  return (
+    <form onSubmit={go} className="contents">
+      <Field label="Name"><input className="input" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></Field>
+      <Field label="Abbreviation"><input className="input" value={v.abbreviation} onChange={(e) => setV({ ...v, abbreviation: e.target.value })} /></Field>
+      <Field label={secret ? 'Confidential topic' : 'Topic'}><input className="input" value={v.topic} onChange={(e) => setV({ ...v, topic: e.target.value })} /></Field>
+      <div className="sm:col-span-3 flex items-center gap-3">
+        <button type="submit" className="btn btn-primary btn-sm" disabled={!dirty || busy}>{busy ? 'Saving…' : 'Save changes'}</button>
+        {dirty && <span className="text-xs font-semibold text-amber-700">Unsaved changes</span>}
+      </div>
+    </form>
   );
 }

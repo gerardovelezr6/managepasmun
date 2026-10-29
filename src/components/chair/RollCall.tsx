@@ -25,6 +25,7 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
   const { rows: attendance } = useRows<SessionAttendance>('session_attendance', committeeId, 'id');
   const { rows: absences } = useRows<Absence>('delegate_absences', committeeId, 'left_at');
   const [bulk, setBulk] = useState('');
+  const [editing, setEditing] = useState<{ id: string; country: string; name: string } | null>(null);
   const [showManage, setShowManage] = useState(false);
 
   const session = sessions.find((s) => s.id === state.current_session_id) || null;
@@ -124,6 +125,17 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
     const { error } = await supabase().from('delegates').update({ group_key: group_key || null }).eq('id', d.id);
     if (error) toastError(error);
   }
+  async function saveEdit() {
+    if (!editing) return;
+    const country = editing.country.trim();
+    if (!country) return toastError(new Error(t('Name cannot be empty')));
+    // .select() so a blocked update is reported instead of looking saved.
+    const { data, error } = await supabase().from('delegates').update({ country, name: editing.name.trim() }).eq('id', editing.id).select('id');
+    if (error) return toastError(error);
+    if (!data?.length) return toastError(new Error('Nothing was saved: you may not have permission.'));
+    setEditing(null);
+    toast(t('Saved'), 'success');
+  }
   async function remove(d: Delegate) {
     if (!window.confirm(t('Remove {country}?', { country: d.country }))) return;
     const { error } = await supabase().from('delegates').delete().eq('id', d.id);
@@ -190,13 +202,21 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Flag country={d.country} flag={d.flag} group={d.group_key} />
-                    <span className="truncate font-semibold">{d.country}</span>
+                    {editing?.id === d.id ? (
+                      <input autoFocus className="input w-56 py-1" value={editing.country} aria-label={mainLabel} onChange={(e) => setEditing({ ...editing, country: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(null); }} />
+                    ) : (
+                      <span className="truncate font-semibold">{d.country}</span>
+                    )}
                     <GroupBadge groupKey={d.group_key} />
                     {isPresent && lateBy.get(d.id) && <span className="badge bg-amber-100 text-amber-800">{t('Late')}</span>}
                     {out && <span className="badge bg-red-100 text-red-700">{t('Out since {time}', { time: hhmm(out.left_at) })}</span>}
                     {!out && (stepOuts.get(d.id) || 0) > 0 && <span className="text-xs text-slate-400">{t('stepped out {n}×', { n: stepOuts.get(d.id) || 0 })}</span>}
                   </div>
-                  <div className="truncate text-xs text-slate-500">{d.name || t('Delegate name placeholder')}</div>
+                  {editing?.id === d.id ? (
+                    <input className="input mt-1 w-56 py-1 text-xs" value={editing.name} placeholder={t('Delegate name')} aria-label={t('Delegate name')} onChange={(e) => setEditing({ ...editing, name: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(null); }} />
+                  ) : (
+                    <div className="truncate text-xs text-slate-500">{d.name || t('Delegate name placeholder')}</div>
+                  )}
                 </div>
                 {isPresent && session && (
                   <button className={`btn btn-sm ${lateBy.get(d.id) ? 'bg-amber-100 text-amber-800' : 'btn-ghost'}`} onClick={() => toggleLate(d)} title={t('Toggle late flag')}>
@@ -236,6 +256,14 @@ export function RollCall({ committeeId, state }: { committeeId: string; state: C
                       <option value="none">{t('No flag')}</option>
                       {flags.map((f) => <option key={f.code} value={f.code}>{f.name}</option>)}
                     </select>}
+                    {editing?.id === d.id ? (
+                      <>
+                        <button className="btn btn-primary btn-sm" onClick={saveEdit}>{t('Save')}</button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setEditing(null)}>{t('Cancel')}</button>
+                      </>
+                    ) : (
+                      <button className="btn btn-secondary btn-sm" onClick={() => setEditing({ id: d.id, country: d.country, name: d.name || '' })}>{t('Edit')}</button>
+                    )}
                     <button className="btn btn-ghost btn-sm text-red-600" onClick={() => remove(d)}>{t('Remove')}</button>
                   </>
                 )}
