@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { BrandMark, useSettings } from '@/components/BrandProvider';
 import { LiveTimer } from '@/components/LiveTimer';
@@ -78,9 +79,9 @@ function Display({ id }: { id: string }) {
       <header className="flex items-center gap-5 border-b border-stage-line px-8 py-4">
         <BrandMark size={52} />
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">{settings.conference_name}</div>
+          <div className="text-sm font-semibold uppercase tracking-[0.2em] text-white">{settings.conference_name}</div>
           <h1 className="truncate text-3xl font-extrabold">{committee.name}</h1>
-          <p className="scroll-x text-lg text-slate-300">{t('Topic')}: {type.secret_topic ? t('Confidential') : committee.topic}</p>
+          <Ticker className="text-lg text-slate-300">{t('Topic')}: {type.secret_topic ? t('Confidential') : committee.topic}</Ticker>
         </div>
         <div className="text-right">
           <div
@@ -240,6 +241,33 @@ function ResultBanner({ vote }: { vote: VoteRow }) {
   return (
     <div className={`mt-8 rounded-2xl px-8 py-4 text-2xl font-bold ${passed ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
       {vote.label ? `${vote.label} · ` : ''}{vote.title}: {passed ? tr('PASSED') : tr('FAILED')} ({tr('{n} in favor', { n: vote.final_for ?? 0 })}, {tr('{n} against', { n: vote.final_against ?? 0 })}{vote.kind === 'substantive' ? `, ${tr(vote.final_abstain === 1 ? '{n} abstention' : '{n} abstentions', { n: vote.final_abstain ?? 0 })}` : ''})
+    </div>
+  );
+}
+
+/** One line of text that loops sideways like a news ticker when it is too long to fit. */
+function Ticker({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const one = useRef<HTMLSpanElement>(null);
+  const [over, setOver] = useState(false);
+  const [dur, setDur] = useState(20);
+  useEffect(() => {
+    const measure = () => {
+      if (!box.current || !one.current) return;
+      const w = one.current.scrollWidth;
+      setOver(w > box.current.clientWidth);
+      setDur(Math.max(12, w / 70)); // ~70px per second
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [children]);
+  return (
+    <div ref={box} className={`marquee ${className}`}>
+      <div className={over ? 'marquee-track' : 'inline-flex'} style={{ ['--marquee-dur' as string]: `${dur}s` }}>
+        <span ref={one}>{children}</span>
+        {over && <span aria-hidden>{children}</span>}
+      </div>
     </div>
   );
 }
