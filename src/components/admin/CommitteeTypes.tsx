@@ -18,12 +18,13 @@ const BULK: { value: string; label: string; cols: BulkColumn[] }[] = [
   { value: 'country,name', label: 'Country, Name', cols: ['country', 'name'] },
   { value: 'country,name,group', label: 'Country, Name, Group', cols: ['country', 'name', 'group'] },
   { value: 'group,name,country', label: 'Group, Name, Country', cols: ['group', 'name', 'country'] },
+  { value: 'group,country,name', label: 'Group, Country, Name', cols: ['group', 'country', 'name'] },
   { value: 'name,group', label: 'Name, Group', cols: ['name', 'group'] },
 ];
 
 // High Command: define what kinds of committee exist, what they are called and how their delegates look.
 export function CommitteeTypes() {
-  const { settings } = useSettings();
+  const { settings, reload } = useSettings();
   const saved = catalogOf(settings);
   const [cat, setCat] = useState<Catalog>(saved);
   const [dirty, setDirty] = useState(false);
@@ -52,10 +53,13 @@ export function CommitteeTypes() {
 
   async function save() {
     setBusy(true);
-    const { error } = await supabase().from('settings').update({ committee_catalog: cat }).eq('id', 1);
+    const { data, error } = await supabase().from('settings').update({ committee_catalog: cat }).eq('id', 1).select('id');
     setBusy(false);
     if (error) return toastError(error);
+    // An update that matches no row is not an error in Supabase: say so instead of pretending it saved.
+    if (!data?.length) return toastError(new Error('Nothing was saved: the settings row is missing or you are not High Command. Run the Supabase migrations and sign in as High Command.'));
     setDirty(false);
+    reload(); // don't rely on realtime to refresh the shared settings
     toast('Saved', 'success');
   }
 
