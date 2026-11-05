@@ -29,20 +29,28 @@ function hexToRgbTriplet(hex: string, fb: string) {
 
 export function BrandProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(fallback);
+  // Hold a loading screen until the real settings arrive, so default colours and placeholder text never flash.
+  const [ready, setReady] = useState(false);
 
   const load = async () => {
-    const { data } = await supabase().from('settings').select('*').eq('id', 1).maybeSingle();
-    if (data) setSettings({ ...fallback, ...(data as Settings) });
+    try {
+      const { data } = await supabase().from('settings').select('*').eq('id', 1).maybeSingle();
+      if (data) setSettings({ ...fallback, ...(data as Settings) });
+    } finally {
+      setReady(true);
+    }
   };
 
   useEffect(() => {
     load();
+    const bail = setTimeout(() => setReady(true), 6000); // never trap the user behind the loader
     const sb = supabase();
     const ch = sb
       .channel(`settings-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, load)
       .subscribe();
     return () => {
+      clearTimeout(bail);
       sb.removeChannel(ch);
     };
   }, []);
@@ -62,7 +70,19 @@ export function BrandProvider({ children }: { children: React.ReactNode }) {
     document.title = `${settings.short_name || 'MUN'} · ${APP_CONFIG.appName}`;
   }, [settings]);
 
-  return <Ctx.Provider value={{ settings, reload: load }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ settings, reload: load }}>
+      {children}
+      <div
+        aria-hidden={ready}
+        role="status"
+        className={`fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4 bg-white transition-opacity duration-300 ${ready ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
+      >
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-500" />
+        <span className="sr-only">Loading…</span>
+      </div>
+    </Ctx.Provider>
+  );
 }
 
 export function BrandMark({ size = 36, className = '' }: { size?: number; className?: string }) {
