@@ -80,6 +80,10 @@ export function Speakers({ committeeId, state, update }: { committeeId: string; 
         </div>
 
         <TimerPanel label={t('Speaker timer')} timer={state.speaker_timer} onChange={(tm: TimerState) => update({ speaker_timer: tm })} presetsSec={APP_CONFIG.speakingPresets} />
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-600">
+          <input type="checkbox" checked={state.show_timer !== false} onChange={(e) => update({ show_timer: e.target.checked })} />
+          {t('Show timer on projection screen')}
+        </label>
 
         <div className="card">
           <label className="label" htmlFor="spk">{t('Default speaking time (seconds)')}</label>
