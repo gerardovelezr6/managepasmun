@@ -43,7 +43,7 @@ function LoginForm() {
       <form onSubmit={submit} className="w-full max-w-sm card p-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <BrandMark size={52} />
-          <h1 className="mt-4 text-xl font-bold">Chair &amp; High Command Login</h1>
+          <h1 className="mt-4 text-xl font-bold">Login</h1>
           <p className="mt-1 text-sm text-slate-500">{settings.conference_name}</p>
         </div>
         {!supabaseConfigured && (
