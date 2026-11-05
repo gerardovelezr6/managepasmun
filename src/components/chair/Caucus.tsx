@@ -119,6 +119,10 @@ export function Caucus({ committeeId, state, update }: { committeeId: string; st
             </div>
           </div>
           <TimerPanel label={t('Speaker timer')} timer={state.speaker_timer} onChange={(tm: TimerState) => update({ speaker_timer: tm })} big={false} />
+          {moderated && <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <input type="checkbox" checked={state.show_timer !== false} onChange={(e) => update({ show_timer: e.target.checked })} />
+            {t('Show timer on projection screen')}
+          </label>}
         </div>
       ) : (
         <div className="card self-start text-sm text-slate-600">{t('Delegates are in informal discussion. The projection screen shows the countdown only. Turn on Speaking time to recognise speakers.')}</div>
