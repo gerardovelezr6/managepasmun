@@ -22,7 +22,7 @@ Next.js 14 (App Router) · Tailwind CSS · Supabase (Auth, Postgres + Realtime, 
 ```bash
 cp .env.example .env.local   # fill in all 5 values
 npm install
-npm run bootstrap -- you@example.org "a-strong-password" "Secretary-General Placeholder"   # first High Command account (Node 20.6+)
+npm run bootstrap -- user@cap.edu.mx "a-strong-password" "Secretary-General Placeholder"   # first High Command account (Node 20.6+)
 npm run dev                  # http://localhost:3000
 ```
 
@@ -90,8 +90,8 @@ One-time Supabase setup so links don't point to `localhost:3000`:
 Advisors can do everything High Command can. Only advisors can run the **full administrative reset** and create, change or remove other advisors (High Command can still save archives and manage chairs and High Command accounts).
 
 Run `supabase/migrations/005_advisor_role.sql` in the SQL Editor, then make the first advisor, either:
-- `npm run bootstrap -- you@example.org "Password" "Name" advisor` (creates a new account), or
-- in the SQL Editor: `update public.profiles set role = 'advisor' where email = 'you@example.org';` (promotes an existing account). Run it before any other advisors exist or after, the SQL Editor is always allowed.
+- `npm run bootstrap -- user@cap.edu.mx "Password" "Name" advisor` (creates a new account), or
+- in the SQL Editor: `update public.profiles set role = 'advisor' where email = 'user@cap.edu.mx';` (promotes an existing account). Run it before any other advisors exist or after, the SQL Editor is always allowed.
 
 ## Calls of attention, Spanish committees and flags
 

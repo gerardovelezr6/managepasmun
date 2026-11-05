@@ -57,6 +57,8 @@ export interface CommitteeState {
   speaking_time_sec: number;
   caucus_topic: string | null;
   caucus_speaking_sec: number | null;
+  show_timer?: boolean;
+  unmod_speaking?: boolean;
   session_started_at: string | null;
   current_session_id: string | null;
   updated_at: string;

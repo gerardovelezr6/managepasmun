@@ -73,7 +73,7 @@ export function System() {
           <p className="text-sm text-slate-600">
             Saves a full snapshot (committees, rosters, sessions and roll calls, speakers, motions, points, votes, participation grades, warnings, awards, announcements, document records) as an archive for future High Command teams. Then a reset clears the live session: attendance, sessions, speakers’ lists, motions, points, votes, grades, warnings, awards, announcements and timers. Accounts, branding and uploaded files are kept.
           </p>
-          <Field label="Archive label"><input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="[Placeholder: PASMUN 2026 Day 1]" /></Field>
+          <Field label="Archive label"><input className="input" value={label} onChange={(e) => setLabel(e.target.value)} /></Field>
           <button className="btn btn-secondary" onClick={archiveOnly} disabled={busy}>Save archive only (no deletion)</button>
         </div>
 
@@ -84,7 +84,7 @@ export function System() {
             <input type="checkbox" className="mt-1" checked={wipe} onChange={(e) => setWipe(e.target.checked)} />
             <span>Also delete committees, delegate rosters and chair assignments (start the next conference from a blank slate).</span>
           </label>
-          <Field label={`Type ${CONFIRM_WORD} to confirm`}><input className="input" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder={CONFIRM_WORD} /></Field>
+          <Field label={`Type ${CONFIRM_WORD} to confirm`}><input className="input" value={confirm} onChange={(e) => setConfirm(e.target.value)} /></Field>
           <button className="btn btn-danger w-full" disabled={busy || confirm !== CONFIRM_WORD} onClick={reset}>
             {busy ? 'Working…' : 'Archive everything and reset the system'}
           </button>
