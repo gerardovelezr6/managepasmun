@@ -110,7 +110,7 @@ function Display({ id }: { id: string }) {
             <div>
               <div className="text-xl font-semibold uppercase tracking-[0.25em] text-accent">{t('Unmoderated caucus')}</div>
               <div className="mt-2 text-3xl text-slate-200">{state.caucus_topic}</div>
-              <LiveTimer timer={state.caucus_timer} className="mt-6 block font-mono text-[11rem] font-black leading-none" />}
+              <LiveTimer timer={state.caucus_timer} className="mt-6 block font-mono text-[11rem] font-black leading-none" />
               {state.unmod_speaking && (
                 <div className="mt-8">
                   <div className="text-lg font-semibold uppercase tracking-[0.25em] text-slate-400">{speaker ? t('Now speaking') : t('Floor is open')} · {t('{n}s per speaker', { n: state.caucus_speaking_sec || 0 })}</div>
