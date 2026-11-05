@@ -43,14 +43,14 @@ function LoginForm() {
       <form onSubmit={submit} className="w-full max-w-sm card p-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <BrandMark size={52} />
-          <h1 className="mt-4 text-xl font-bold">Login</h1>
+          <h1 className="mt-4 text-xl font-bold">Chair &amp; High Command Login</h1>
           <p className="mt-1 text-sm text-slate-500">{settings.conference_name}</p>
         </div>
         {!supabaseConfigured && (
           <p className="mb-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Supabase env vars are not set yet. See the README.</p>
         )}
         <label className="label" htmlFor="email">Email</label>
-        <input id="email" className="input" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="chair@example.org" />
+        <input id="email" className="input" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@cap.edu.mx" />
         <label className="label mt-4" htmlFor="pw">Password</label>
         <input id="pw" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}

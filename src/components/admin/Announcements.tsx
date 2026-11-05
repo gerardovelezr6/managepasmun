@@ -64,7 +64,7 @@ export function Announcements() {
     <div className="grid gap-4 lg:grid-cols-3">
       <form onSubmit={send} className="card h-fit space-y-3">
         <h3 className="font-bold">Global announcement</h3>
-        <Field label="Message"><textarea required className="input h-24" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="[Placeholder: Lunch is served in the main hall at 12:30]" /></Field>
+        <Field label="Message"><textarea required className="input h-24" value={message} onChange={(e) => setMessage(e.target.value)} /></Field>
         <Field label="Priority"><Seg<Announcement['severity']> value={severity} onChange={setSeverity} options={[{ value: 'info', label: 'Info' }, { value: 'urgent', label: 'Urgent', tone: 'bg-red-600 text-white' }]} /></Field>
         <Field label="When"><Seg<'now' | 'later'> value={when} onChange={setWhen} options={[{ value: 'now', label: 'Send now' }, { value: 'later', label: 'Schedule' }]} /></Field>
         {when === 'later' && (

@@ -83,7 +83,7 @@ export function Users() {
       <form onSubmit={create} className="card h-fit space-y-3">
         <h3 className="font-bold">Create account</h3>
         <Field label="Full name"><input className="input" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="[Placeholder Name]" /></Field>
-        <Field label="Email"><input type="email" required className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="chair@example.org" /></Field>
+        <Field label="Email"><input type="email" required className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="user@cap.edu.mx" /></Field>
         <Field label="Temporary password" hint="At least 8 characters. Share it privately."><input type="text" required minLength={8} className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></Field>
         <Field label="Role">
           <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>

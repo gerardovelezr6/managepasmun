@@ -114,7 +114,7 @@ export function Onboarding() {
           <h3 className="font-bold">Invite a new user</h3>
           <p className="text-xs text-slate-500">You get a link to hand over. They open it and choose their own password. No email is sent.</p>
           <Field label="Full name"><input className="input" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="[Placeholder Name]" /></Field>
-          <Field label="Email"><input type="email" required className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="chair@example.org" /></Field>
+          <Field label="Email"><input type="email" required className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="user@cap.edu.mx" /></Field>
           <Field label="Role">
             <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               {isAdvisor && <option value="advisor">Advisor</option>}

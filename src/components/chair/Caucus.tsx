@@ -33,7 +33,7 @@ export function Caucus({ committeeId, state, update }: { committeeId: string; st
   }
   async function endCaucus() {
     if (state.current_speaker_id) await endSpeech(committeeId, state, update);
-    await update({ mode: 'formal', caucus_topic: null, caucus_speaking_sec: null, caucus_timer: emptyTimer(0) });
+    await update({ mode: 'formal', caucus_topic: null, caucus_speaking_sec: null, unmod_speaking: false, current_speaker_id: null, caucus_timer: emptyTimer(0) });
   }
   async function recognize() {
     if (!pick) return;
@@ -75,19 +75,34 @@ export function Caucus({ committeeId, state, update }: { committeeId: string; st
   }
 
   const moderated = state.mode === 'moderated';
+  const speaking = moderated || !!state.unmod_speaking;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="space-y-4">
         <div className="card">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{moderated ? t('Moderated caucus') : t('Unmoderated caucus')}</div>
           <div className="mt-1 text-lg font-bold">{state.caucus_topic}</div>
-          {moderated && <div className="text-sm text-slate-500">{t('{n}s per speaker', { n: state.caucus_speaking_sec || 0 })}</div>}
+          {speaking && <div className="text-sm text-slate-500">{t('{n}s per speaker', { n: state.caucus_speaking_sec || 0 })}</div>}
+          {!moderated && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={!!state.unmod_speaking} onChange={(e) => update({ unmod_speaking: e.target.checked, caucus_speaking_sec: state.caucus_speaking_sec || speakSec, ...(e.target.checked ? { speaker_timer: emptyTimer((state.caucus_speaking_sec || speakSec) * 1000) } : {}) })} />
+                {t('Speaking time')}
+              </label>
+              {state.unmod_speaking && (
+                <label className="flex items-center gap-2">
+                  <input key={state.caucus_speaking_sec} type="number" min={5} className="input w-20 py-1" defaultValue={state.caucus_speaking_sec || speakSec} onBlur={(e) => { const v = Math.max(5, Number(e.target.value) || 5); if (v !== state.caucus_speaking_sec) update({ caucus_speaking_sec: v }); }} />
+                  {t('sec per speaker')}
+                </label>
+              )}
+            </div>
+          )}
         </div>
         <TimerPanel label={t('Caucus total time')} timer={state.caucus_timer} onChange={(tm: TimerState) => update({ caucus_timer: tm })} presetsSec={[60, 180, 300, 600, 900]} />
         <button className="btn btn-danger w-full" onClick={endCaucus}>{t('End caucus & return to formal debate')}</button>
       </div>
 
-      {moderated ? (
+      {speaking ? (
         <div className="space-y-4">
           <div className="card">
             <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Recognise a speaker')}</div>
@@ -106,7 +121,7 @@ export function Caucus({ committeeId, state, update }: { committeeId: string; st
           <TimerPanel label={t('Speaker timer')} timer={state.speaker_timer} onChange={(tm: TimerState) => update({ speaker_timer: tm })} big={false} />
         </div>
       ) : (
-        <div className="card self-start text-sm text-slate-600">{t('Delegates are in informal discussion. The projection screen shows the countdown only.')}</div>
+        <div className="card self-start text-sm text-slate-600">{t('Delegates are in informal discussion. The projection screen shows the countdown only. Turn on Speaking time to recognise speakers.')}</div>
       )}
     </div>
   );

@@ -72,6 +72,7 @@ function Display({ id }: { id: string }) {
   const speaker = state.current_speaker_id ? byId.get(state.current_speaker_id) : null;
   const sessionNumber = sessions.find((s) => s.id === state.current_session_id)?.number;
   const live = state.status === 'in_session';
+  const showTimer = state.show_timer !== false;
 
   return (
     <div className="flex min-h-screen flex-col bg-stage text-white on-dark">
@@ -109,7 +110,18 @@ function Display({ id }: { id: string }) {
             <div>
               <div className="text-xl font-semibold uppercase tracking-[0.25em] text-accent">{t('Unmoderated caucus')}</div>
               <div className="mt-2 text-3xl text-slate-200">{state.caucus_topic}</div>
-              <LiveTimer timer={state.caucus_timer} className="mt-6 block font-mono text-[11rem] font-black leading-none" />
+              {showTimer && <LiveTimer timer={state.caucus_timer} className="mt-6 block font-mono text-[11rem] font-black leading-none" />}
+              {state.unmod_speaking && (
+                <div className="mt-8">
+                  <div className="text-lg font-semibold uppercase tracking-[0.25em] text-slate-400">{speaker ? t('Now speaking') : t('Floor is open')} · {t('{n}s per speaker', { n: state.caucus_speaking_sec || 0 })}</div>
+                  <div className="mt-2 flex items-center justify-center gap-5 text-6xl font-black leading-tight">
+                    {speaker && <Flag country={speaker.country} flag={speaker.flag} group={speaker.group_key} className="!text-5xl" />}
+                    <span>{speaker ? speaker.country : '—'}</span>
+                    {speaker && <GroupBadge solid groupKey={speaker.group_key} className="!px-4 !py-1.5 !text-2xl" full />}
+                  </div>
+                  {showTimer && <LiveTimer timer={state.speaker_timer} className="mt-4 block font-mono text-8xl font-black leading-none" />}
+                </div>
+              )}
             </div>
           ) : (
             <div className="w-full">
@@ -117,7 +129,7 @@ function Display({ id }: { id: string }) {
                 <div className="mb-6">
                   <div className="text-lg font-semibold uppercase tracking-[0.25em] text-accent">{t('Moderated caucus')} · {t('{n}s per speaker', { n: state.caucus_speaking_sec || 0 })}</div>
                   <div className="mt-1 text-2xl text-slate-200">{state.caucus_topic}</div>
-                  <div className="mt-2 text-slate-400">{t('Caucus time remaining')} <LiveTimer timer={state.caucus_timer} className="font-mono text-3xl font-bold text-white" /></div>
+                  {showTimer && <div className="mt-2 text-slate-400">{t('Caucus time remaining')} <LiveTimer timer={state.caucus_timer} className="font-mono text-3xl font-bold text-white" /></div>}
                 </div>
               )}
               <div className="text-lg font-semibold uppercase tracking-[0.25em] text-slate-400">{speaker ? t('Now speaking') : t('Floor is open')}</div>
@@ -126,7 +138,7 @@ function Display({ id }: { id: string }) {
                 <span>{speaker ? speaker.country : '—'}</span>
                 {speaker && <GroupBadge solid groupKey={speaker.group_key} className="!px-4 !py-1.5 !text-2xl" full />}
               </div>
-              <LiveTimer timer={state.speaker_timer} className="mt-6 block font-mono text-[9rem] font-black leading-none" />
+              {showTimer && <LiveTimer timer={state.speaker_timer} className="mt-6 block font-mono text-[9rem] font-black leading-none" />}
             </div>
           )}
           {lastClosed && state.mode !== 'voting' && <ResultBanner vote={lastClosed} />}
