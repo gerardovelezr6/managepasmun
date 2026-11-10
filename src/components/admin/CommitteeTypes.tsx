@@ -6,6 +6,7 @@ import { useSettings } from '../BrandProvider';
 import { BulkColumn, Catalog, Category, CommitteeType, DEFAULT_CATALOG, FlagSource, Group, catalogOf, slug } from '@/lib/catalog';
 import { GroupBadge } from '../Flag';
 import { Field } from '../ui';
+import { useSpanishUse } from '@/lib/hooks';
 
 const FLAG_SOURCES: { value: FlagSource; label: string }[] = [
   { value: 'country', label: 'Country flag (from the country name)' },
@@ -27,6 +28,7 @@ const canon = (v: unknown): string => JSON.stringify(v, (_, x) => (x && typeof x
 
 // High Command: define what kinds of committee exist, what they are called and how their delegates look.
 export function CommitteeTypes() {
+  const es = useSpanishUse();
   const { settings, reload } = useSettings();
   const saved = catalogOf(settings);
   const [cat, setCat] = useState<Catalog>(saved);
@@ -140,7 +142,7 @@ export function CommitteeTypes() {
               >⋮⋮</span>
               <input type="color" className="h-9 w-10 rounded border border-slate-200" value={c.color} onChange={(e) => setCategory(c.key, { color: e.target.value })} aria-label="Colour" />
               <input className="input max-w-xs flex-1" value={c.name} onChange={(e) => setCategory(c.key, { name: e.target.value })} aria-label="Name" />
-              <input className="input max-w-xs flex-1" value={c.name_es || ''} placeholder="Nombre en español" onChange={(e) => setCategory(c.key, { name_es: e.target.value })} aria-label="Nombre en español" />
+              {es.categories.has(c.key) && <input className="input max-w-xs flex-1" value={c.name_es || ''} placeholder="Nombre en español" onChange={(e) => setCategory(c.key, { name_es: e.target.value })} aria-label="Nombre en español" />}
               <button className="btn btn-ghost btn-sm text-red-600" onClick={() => window.confirm(`Remove “${c.name}”? Committees in it become uncategorized.`) && edit((x) => { x.categories = x.categories.filter((k) => k.key !== c.key); })}>Remove</button>
             </div>
           ))}
@@ -164,7 +166,7 @@ export function CommitteeTypes() {
               <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Field label="Name"><input className="input" value={t.name} onChange={(e) => setType(t.key, { name: e.target.value })} /></Field>
-                  <Field label="Nombre en español"><input className="input" value={t.name_es || ''} onChange={(e) => setType(t.key, { name_es: e.target.value })} /></Field>
+                  {es.types.has(t.key) && <Field label="Nombre en español"><input className="input" value={t.name_es || ''} onChange={(e) => setType(t.key, { name_es: e.target.value })} /></Field>}
                   <Field label="Default category">
                     <select className="input" value={t.default_category || ''} onChange={(e) => setType(t.key, { default_category: e.target.value || null })}>
                       <option value="">None</option>
@@ -174,7 +176,7 @@ export function CommitteeTypes() {
                   <Field label="Main column is called" hint="Country, State...">
                     <input className="input" value={t.label_field} onChange={(e) => setType(t.key, { label_field: e.target.value })} />
                   </Field>
-                  <Field label="Se llama (español)"><input className="input" value={t.label_field_es || ''} onChange={(e) => setType(t.key, { label_field_es: e.target.value })} /></Field>
+                  {es.types.has(t.key) && <Field label="Se llama (español)"><input className="input" value={t.label_field_es || ''} onChange={(e) => setType(t.key, { label_field_es: e.target.value })} /></Field>}
                   <Field label="Flag">
                     <select className="input" value={t.flag} onChange={(e) => setType(t.key, { flag: e.target.value as FlagSource })}>
                       {FLAG_SOURCES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
@@ -186,7 +188,7 @@ export function CommitteeTypes() {
                     </select>
                   </Field>
                   <Field label="Groups are called" hint="Party, Side..."><input className="input" value={t.group_label || ''} onChange={(e) => setType(t.key, { group_label: e.target.value })} /></Field>
-                  <Field label="Se llaman (español)"><input className="input" value={t.group_label_es || ''} onChange={(e) => setType(t.key, { group_label_es: e.target.value })} /></Field>
+                  {es.types.has(t.key) && <Field label="Se llaman (español)"><input className="input" value={t.group_label_es || ''} onChange={(e) => setType(t.key, { group_label_es: e.target.value })} /></Field>}
                 </div>
                 <div className="flex flex-wrap gap-4 text-sm">
                   <label className="flex items-center gap-2"><input type="checkbox" checked={!!t.group_required} onChange={(e) => setType(t.key, { group_required: e.target.checked })} /> Every delegate needs a group</label>
@@ -203,7 +205,7 @@ export function CommitteeTypes() {
                       <div key={g.key} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 p-2">
                         <input type="color" className="h-9 w-10 rounded border border-slate-200" value={g.color} onChange={(e) => setGroup(t.key, i, { color: e.target.value })} aria-label="Colour" />
                         <input className="input w-36" value={g.name} onChange={(e) => setGroup(t.key, i, { name: e.target.value })} aria-label="Name" placeholder="Name" />
-                        <input className="input w-36" value={g.name_es || ''} onChange={(e) => setGroup(t.key, i, { name_es: e.target.value })} aria-label="Nombre" placeholder="Nombre (es)" />
+                        {es.types.has(t.key) && <input className="input w-36" value={g.name_es || ''} onChange={(e) => setGroup(t.key, i, { name_es: e.target.value })} aria-label="Nombre" placeholder="Nombre (es)" />}
                         <input className="input w-24" value={g.short} maxLength={8} onChange={(e) => setGroup(t.key, i, { short: e.target.value })} aria-label="Badge text" placeholder="Badge" />
                         <GroupBadge groupKey={g.key} type={t} />
                         <button className="btn btn-secondary btn-sm" onClick={() => { upload.current = { type: t.key, group: i }; fileRef.current?.click(); }}>{g.logo ? 'Change logo' : 'Upload logo'}</button>

@@ -202,3 +202,18 @@ export function useSecretTopics() {
   });
   return map;
 }
+
+// Which categories and types are used by a Spanish committee. Spanish wording is only needed (and only asked for) there.
+export function useSpanishUse() {
+  const [use, setUse] = useState<{ any: boolean; types: Set<string>; categories: Set<string> }>({ any: false, types: new Set(), categories: new Set() });
+  useLiveReload(['committees'], async () => {
+    const { data } = await supabase().from('committees').select('type, category').eq('language', 'es');
+    const rows = (data || []) as { type: string | null; category: string | null }[];
+    setUse({
+      any: rows.length > 0,
+      types: new Set(rows.map((r) => r.type || '').filter(Boolean)),
+      categories: new Set(rows.map((r) => r.category || '').filter(Boolean)),
+    });
+  });
+  return use;
+}
