@@ -130,20 +130,22 @@ export function CommitteeTypes() {
               key={c.key}
               onDragOver={(e) => { if (dragCat && dragCat !== c.key) { e.preventDefault(); setOverCat(c.key); } }}
               onDrop={(e) => { e.preventDefault(); if (dragCat) moveCategory(dragCat, c.key); setDragCat(null); setOverCat(null); }}
-              className={`flex flex-wrap items-center gap-2 rounded-lg ${dragCat === c.key ? 'opacity-40' : ''} ${overCat === c.key ? 'ring-2 ring-brand' : ''}`}
+              className={`grid items-center gap-3 border border-slate-200 bg-white px-3 py-2 ${es.categories.size ? 'grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1fr)_auto]' : 'grid-cols-[auto_auto_minmax(0,1fr)_auto]'} ${dragCat === c.key ? 'opacity-40' : ''} ${overCat === c.key ? 'ring-2 ring-brand' : ''}`}
             >
               <span
                 draggable
                 title="Drag to reorder"
                 onDragStart={(e) => { setDragCat(c.key); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.key); const row = (e.currentTarget as HTMLElement).parentElement; if (row) e.dataTransfer.setDragImage(row, 16, 16); }}
                 onDragEnd={() => { setDragCat(null); setOverCat(null); }}
-                className="cursor-grab select-none px-1 text-lg leading-none text-slate-300 hover:text-slate-500 active:cursor-grabbing"
+                className="cursor-grab select-none text-base leading-none tracking-tighter text-slate-300 hover:text-slate-600 active:cursor-grabbing"
                 aria-label="Drag handle"
               >⋮⋮</span>
-              <input type="color" className="h-9 w-10 rounded border border-slate-200" value={c.color} onChange={(e) => setCategory(c.key, { color: e.target.value })} aria-label="Colour" />
-              <input className="input max-w-xs flex-1" value={c.name} onChange={(e) => setCategory(c.key, { name: e.target.value })} aria-label="Name" />
-              {es.categories.has(c.key) && <input className="input max-w-xs flex-1" value={c.name_es || ''} placeholder="Nombre en español" onChange={(e) => setCategory(c.key, { name_es: e.target.value })} aria-label="Nombre en español" />}
-              <button className="btn btn-ghost btn-sm text-red-600" onClick={() => window.confirm(`Remove “${c.name}”? Committees in it become uncategorized.`) && edit((x) => { x.categories = x.categories.filter((k) => k.key !== c.key); })}>Remove</button>
+              <input type="color" className="h-8 w-8 cursor-pointer border border-slate-200 bg-white p-0.5" value={c.color} onChange={(e) => setCategory(c.key, { color: e.target.value })} aria-label="Colour" />
+              <input className="input py-1.5" value={c.name} onChange={(e) => setCategory(c.key, { name: e.target.value })} aria-label="Name" />
+              {es.categories.size > 0 && (es.categories.has(c.key)
+                ? <input className="input py-1.5" value={c.name_es || ''} placeholder="Nombre en español" onChange={(e) => setCategory(c.key, { name_es: e.target.value })} aria-label="Nombre en español" />
+                : <span />)}
+              <button className="btn btn-ghost btn-sm justify-self-end text-red-600" onClick={() => window.confirm(`Remove “${c.name}”? Committees in it become uncategorized.`) && edit((x) => { x.categories = x.categories.filter((k) => k.key !== c.key); })}>Remove</button>
             </div>
           ))}
         </div>
