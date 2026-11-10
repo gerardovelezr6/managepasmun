@@ -7,6 +7,7 @@ import { toast, toastError } from '@/lib/toast';
 import { RubricLevel } from '@/lib/types';
 import { useSettings } from '../BrandProvider';
 import { Empty, Field } from '../ui';
+import { useSpanishUse } from '@/lib/hooks';
 
 type Cat = RubricLevel['category'];
 
@@ -32,6 +33,7 @@ function AutoText({ defaultValue, placeholder, onSave }: { defaultValue: string;
 
 export function RubricEditor() {
   const { levels, reload } = useRubric();
+  const es = useSpanishUse();
   const { settings, reload: reloadSettings } = useSettings();
   const [cat, setCat] = useState<Cat>('sl_speech');
   const [draft, setDraft] = useState({ level_key: '', label: '', description: '', score: '' });
@@ -117,6 +119,7 @@ export function RubricEditor() {
                     <AutoText defaultValue={l.description} onSave={(v) => v !== l.description && patch(l, { description: v })} />
                   </Field>
                 </div>
+                {es.any && (
                 <div className="space-y-3 lg:border-l lg:border-slate-100 lg:pl-4">
                   <Field label="Spanish wording (Spanish committees)">
                     <input className="input" defaultValue={l.label_es || ''} placeholder={l.label} onBlur={(e) => e.target.value !== (l.label_es || '') && patch(l, { label_es: e.target.value || null })} />
@@ -125,6 +128,7 @@ export function RubricEditor() {
                     <AutoText defaultValue={l.description_es || ''} placeholder={l.description} onSave={(v) => v !== (l.description_es || '') && patch(l, { description_es: v || null })} />
                   </Field>
                 </div>
+                )}
               </div>
             </div>
           ))}
